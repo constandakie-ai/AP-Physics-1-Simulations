@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AP Physics 1 Simulations</title>
+    <style>
+        /* --- GLOBAL STYLES --- */
+        :root {
+            --primary: #2c3e50;
+            --accent: #3498db;
+            --bg: #f4f4f9;
+        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg); color: #333; margin: 0; padding: 0; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+        
+        /* --- NAVIGATION --- */
+        nav { width: 100%; background: var(--primary); padding: 15px; text-align: center; color: white; box-shadow: 0 2px 5px rgba(0,0,0,0.2); display: flex; justify-content: space-between; align-items: center; box-sizing: border-box; }
+        nav h1 { margin: 0; font-size: 1.2rem; }
+        .nav-btn { background: rgba(255,255,255,0.2); border: none; color: white; padding: 5px 15px; border-radius: 4px; cursor: pointer; display: none; } /* Hidden on home */
+        .nav-btn:hover { background: rgba(255,255,255,0.4); }
+
+        /* --- MENU VIEW --- */
+        #menu-view { padding: 40px; text-align: center; max-width: 1000px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-top: 30px; }
+        .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: transform 0.2s, box-shadow 0.2s; cursor: pointer; text-align: left; border-left: 5px solid var(--accent); }
+        .card:hover { transform: translateY(-5px); box-shadow: 0 8px 15px rgba(0,0,0,0.1); }
+        .card h2 { margin-top: 0; color: var(--primary); }
+        .card p { color: #666; line-height: 1.5; }
+        .tag { background: #e1ecf4; color: #39739d; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; }
+
+        /* --- SIMULATION VIEWS --- */
+        .sim-view { display: none; width: 100%; max-width: 1200px; padding: 20px; box-sizing: border-box; flex-direction: column; align-items: center; }
+        .controls-container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 20px; justify-content: center; width: 100%; box-sizing: border-box; }
+        .input-group { display: flex; flex-direction: column; min-width: 150px; }
+        .input-group label { font-size: 0.9rem; font-weight: bold; margin-bottom: 5px; color: #555; }
+        input[type=range] { cursor: pointer; }
+        
+        canvas { background: white; border-radius: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); border: 1px solid #ddd; max-width: 100%; }
+        
+        .btn { padding: 10px 20px; border: none; border-radius: 4px; color: white; cursor: pointer; font-weight: bold; transition: background 0.2s; }
+        .btn-green { background: #27ae60; } .btn-green:hover { background: #219150; }
+        .btn-red { background: #c0392b; } .btn-red:hover { background: #a93226; }
+        .btn-blue { background: #2980b9; } .btn-blue:hover { background: #2471a3; }
+        
+        .stats-bar { margin-top: 10px; font-family: monospace; background: #333; color: #fff; padding: 10px; border-radius: 4px; width: 100%; box-sizing: border-box; text-align: center; }
+    </style>
+</head>
+<body>
+
+    <nav>
+        <span id="nav-title">AP Physics 1 Lab</span>
+        <button id="home-btn" class="nav-btn" onclick="showMenu()">← Back to Menu</button>
+    </nav>
+
+    <div id="menu-view">
+        <h1 style="color: var(--primary);">Select a Simulation</h1>
+        <p>Interactive simulations designed for AP Physics 1 standards.</p>
+        
+        <div class="grid">
+            <div class="card" onclick="startUnit1()">
+                <span class="tag">Unit 1</span>
+                <h2>Kinematics</h2>
+                <p>Projectile motion simulation. Adjust angle, initial velocity, and launch height to visualize 2D vectors.</p>
+            </div>
+
+            <div class="card" onclick="startUnit6()">
+                <span class="tag">Unit 6</span>
+                <h2>Simple Harmonic Motion</h2>
+                <p>Mass-spring system. Visualize Hooke's Law, period ($T$), amplitude, and real-time position graphing.</p>
+            </div>
+
+            <div class="card" style="opacity: 0.6; cursor: default; border-left-color: #999;">
+                <span class="tag" style="background: #ddd; color: #666">Coming Soon</span>
+                <h2>Dynamics</h2>
+                <p>Forces, Free Body Diagrams, and Newton's Laws.</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="view-unit1" class="sim-view">
+        <div class="controls-container">
+            <div class="input-group">
+                <label>Velocity ($v_0$): <span id="u1-v0-val">25</span> m/s</label>
+                <input type="range" id="u1-v0" min="5" max="50" value="25" oninput="u1_update()">
+            </div>
+            <div class="input-group">
+                <label>Angle ($\theta$): <span id="u1-angle-val">45</span>°</label>
+                <input type="range" id="u1-angle" min="0" max="90" value="45" oninput="u1_update()">
+            </div>
+            <div class="input-group">
+                <label>Height ($y_0$): <span id="u1-y0-val">0</span> m</label>
+                <input type="range" id="u1-y0" min="0" max="50" value="0" oninput="u1_update()">
+            </div>
+            <div style="display:flex; align-items: flex-end; gap: 10px;">
+                <button class="btn btn-green" onclick="u1_launch()">Launch</button>
+                <button class="btn btn-red" onclick="u1_reset()">Reset</button>
+            </div>
+        </div>
+        <canvas id="u1-canvas" width="800" height="450"></canvas>
+        <div class="stats-bar" id="u1-stats">Time: 0.00s | X: 0.00m | Y: 0.00m</div>
+    </div>
+
+    <div id="view-unit6" class="sim-view">
+        <div class="controls-container">
+            <div class="input-group">
+                <label>Mass ($m$): <span id="u6-m-val">1.0</span> kg</label>
+                <input type="range" id="u6-m" min="0.5" max="5.0" step="0.1" value="1.0" oninput="u6_update()">
+            </div>
+            <div class="input-group">
+                <label>Spring Constant ($k$): <span id="u6-k-val">20</span> N/m</label>
+                <input type="range" id="u6-k" min="10" max="100" step="5" value="20" oninput="u6_update()">
+            </div>
+            <div class="input-group">
+                <label>Amplitude ($A$): <span id="u6-amp-val">0.5</span> m</label>
+                <input type="range" id="u6-amp" min="0.1" max="1.0" step="0.1" value="0.5" oninput="u6_update()">
+            </div>
+            <div style="display:flex; align-items: flex-end; gap: 10px;">
+                <button class="btn btn-blue" onclick="u6_toggle()">Play/Pause</button>
+            </div>
+            <div class="input-group" style="justify-content: center; font-family: monospace;">
+                <div>Period (T): <span id="u6-period">0.00</span> s</div>
+                <div>Freq (f): <span id="u6-freq">0.00</span> Hz</div>
+            </div>
+        </div>
+        <div style="display: flex; gap: 20px; flex-wrap: wrap; justify-content: center;">
+            <canvas id="u6-sim-canvas" width="400" height="300"></canvas>
+            <canvas id="u6-graph-canvas" width="400" height="300"></canvas>
+        </div>
+    </div>
+
+    <script>
+        // === VIEW SWITCHING LOGIC ===
+        let globalAnimId = null; // To stop loops when switching views
+
+        function stopAllAnimations() {
+            if (globalAnimId) cancelAnimationFrame(globalAnimId);
+            globalAnimId = null;
+        }
+
+        function showMenu() {
+            stopAllAnimations();
+            document.getElementById('menu-view').style.display = 'block';
+            document.getElementById('view-unit1').style.display = 'none';
+            document.getElementById('view-unit6').style.display = 'none';
+            document.getElementById('home-btn').style.display = 'none';
+            document.getElementById('nav-title').innerText = "AP Physics 1 Lab";
+        }
+
+        function startUnit1() {
+            stopAllAnimations();
+            document.getElementById('menu-view').style.display = 'none';
+            document.getElementById('view-unit1').style.display = 'flex';
+            document.getElementById('home-btn').style.display = 'block';
+            document.getElementById('nav-title').innerText = "Unit 1: Kinematics";
+            u1_init();
+        }
+
+        function startUnit6() {
+            stopAllAnimations();
+            document.getElementById('menu-view').style.display = 'none';
+            document.getElementById('view-unit6').style.display = 'flex';
+            document.getElementById('home-btn').style.display = 'block';
+            document.getElementById('nav-title').innerText = "Unit 6: SHM";
+            u6_init();
+        }
+
+        // ============================================
+        // === UNIT 1: KINEMATICS LOGIC ===
+        // ============================================
+        let u1_ctx, u1_canvas;
+        let u1_state = { x: 0, y: 0, vx: 0, vy: 0, t: 0, running: false, trail: [] };
+        const u1_scale = 10; // 10px = 1m
+        const g = 9.8;
+
+        function u1_init() {
+            u1_canvas = document.getElementById('u1-canvas');
+            u1_ctx = u1_canvas.getContext('2d');
+            u1_update(); // Draw initial state
+        }
+
+        function u1_update() {
+            // Update Labels
+            document.getElementById('u1-v0-val').innerText = document.getElementById('u1-v0').value;
+            document.getElementById('u1-angle-val').innerText = document.getElementById('u1-angle').value;
+            document.getElementById('u1-y0-val').innerText = document.getElementById('u1-y0').value;
+            
+            if (!u1_state.running) {
+                // Preview start position
+                let y0 = parseFloat(document.getElementById('u1-y0').value);
+                u1_draw(0, y0, []); 
+            }
+        }
+
+        function u1_launch() {
+            if (u1_state.running) return;
+            
+            let v0 = parseFloat(document.getElementById('u1-v0').value);
+            let theta = parseFloat(document.getElementById('u1-angle').value) * Math.PI / 180;
+            let y0 = parseFloat(document.getElementById('u1-y0').value);
+
+            u1_state = {
+                x: 0,
+                y: y0,
+                vx: v0 * Math.cos(theta),
+                vy: v0 * Math.sin(theta),
+                t: 0,
+                running: true,
+                trail: []
+            };
+            u1_loop();
+        }
+
+        function u1_loop() {
+            if (!u1_state.running) return;
+
+            const dt = 0.05; // Time step
+            u1_state.t += dt;
+            u1_state.x += u1_state.vx * dt;
+            u1_state.y += u1_state.vy * dt;
+            u1_state.vy -= g * dt;
+
+            // Update stats
+            document.getElementById('u1-stats').innerText = 
+                `Time: ${u1_state.t.toFixed(2)}s | X: ${u1_state.x.toFixed(2)}m | Y: ${Math.max(0, u1_state.y).toFixed(2)}m`;
+
+            // Record trail
+            u1_state.trail.push({x: u1_state.x, y: u1_state.y});
+
+            // Draw
+            u1_draw(u1_state.x, u1_state.y, u1_state.trail);
+
+            // Ground collision
+            if (u1_state.y <= 0) {
+                u1_state.running = false;
+                u1_state.y = 0;
+                u1_draw(u1_state.x, 0, u1_state.trail);
+            } else {
+                globalAnimId = requestAnimationFrame(u1_loop);
+            }
+        }
+
+        function u1_draw(x, y, trail) {
+            u1_ctx.clearRect(0, 0, u1_canvas.width, u1_canvas.height);
+
+            // Coords: Origin at bottom-left (shifted 20px)
+            const mapX = (val) => 20 + val * u1_scale;
+            const mapY = (val) => u1_canvas.height - 20 - val * u1_scale;
+
+            // Draw Grid
+            u1_ctx.strokeStyle = '#eee';
+            u1_ctx.beginPath();
+            for(let i=0; i<u1_canvas.width; i+=50) { u1_ctx.moveTo(i,0); u1_ctx.lineTo(i, u1_canvas.height); }
+            for(let i=0; i<u1_canvas.height; i+=50) { u1_ctx.moveTo(0,i); u1_ctx.lineTo(u1_canvas.width, i); }
+            u1_ctx.stroke();
+
+            // Ground
+            u1_ctx.fillStyle = '#7f8c8d';
+            u1_ctx.fillRect(0, u1_canvas.height - 20, u1_canvas.width, 20);
+
+            // Trail
+            u1_ctx.strokeStyle = 'blue';
+            u1_ctx.setLineDash([5,5]);
+            u1_ctx.beginPath();
+            trail.forEach((p, i) => {
+                if(i===0) u1_ctx.moveTo(mapX(p.x), mapY(p.y));
+                else u1_ctx.lineTo(mapX(p.x), mapY(p.y));
+            });
+            u1_ctx.stroke();
+            u1_ctx.setLineDash([]);
+
+            // Cannon Platform
+            let startY = parseFloat(document.getElementById('u1-y0').value);
+            u1_ctx.fillStyle = '#333';
+            u1_ctx.fillRect(10, mapY(startY), 10, startY * u1_scale);
+
+            // Ball
+            u1_ctx.fillStyle = '#e74c3c';
+            u1_ctx.beginPath();
+            u1_ctx.arc(mapX(x), mapY(y), 6, 0, Math.PI*2);
+            u1_ctx.fill();
+        }
+
+        function u1_reset() {
+            u1_state.running = false;
+            cancelAnimationFrame(globalAnimId);
+            u1_update(); // Redraw static scene
+            document.getElementById('u1-stats').innerText = "Time: 0.00s | X: 0.00m | Y: 0.00m";
+        }
+
+
+        // ============================================
+        // === UNIT 6: SHM LOGIC ===
+        // ============================================
+        let u6_sCtx, u6_gCtx, u6_sCanvas, u6_gCanvas;
+        let u6_state = { m: 1, k: 20, A: 0.5, t: 0, running: false, data: [] };
+
+        function u6_init() {
+            u6_sCanvas = document.getElementById('u6-sim-canvas');
+            u6_gCanvas = document.getElementById('u6-graph-canvas');
+            u6_sCtx = u6_sCanvas.getContext('2d');
+            u6_gCtx = u6_gCanvas.getContext('2d');
+            
+            u6_update(true); // Force update params
+            u6_state.running = true;
+            u6_loop();
+        }
+
+        function u6_update(reset = false) {
+            u6_state.m = parseFloat(document.getElementById('u6-m').value);
+            u6_state.k = parseFloat(document.getElementById('u6-k').value);
+            u6_state.A = parseFloat(document.getElementById('u6-amp').value);
+
+            document.getElementById('u6-m-val').innerText = u6_state.m;
+            document.getElementById('u6-k-val').innerText = u6_state.k;
+            document.getElementById('u6-amp-val').innerText = u6_state.A;
+
+            let T = 2 * Math.PI * Math.sqrt(u6_state.m / u6_state.k);
+            document.getElementById('u6-period').innerText = T.toFixed(2);
+            document.getElementById('u6-freq').innerText = (1/T).toFixed(2);
+            
+            if (reset) { u6_state.t = 0; u6_state.data = []; }
+        }
+
+        function u6_toggle() {
+            u6_state.running = !u6_state.running;
+            if (u6_state.running) u6_loop();
+        }
+
+        function u6_loop() {
+            if (!u6_state.running) return;
+
+            let w = Math.sqrt(u6_state.k / u6_state.m);
+            u6_state.t += 0.04;
+            let x = u6_state.A * Math.cos(w * u6_state.t);
+            
+            // Draw Simulation
+            u6_sCtx.clearRect(0,0,400,300);
+            
+            // Wall & Floor
+            u6_sCtx.fillStyle = '#95a5a6';
+            u6_sCtx.fillRect(0, 50, 20, 200); // Wall
+            u6_sCtx.beginPath(); u6_sCtx.moveTo(0,250); u6_sCtx.lineTo(400,250); u6_sCtx.stroke(); // Floor
+
+            // Block & Spring
+            let center = 200;
+            let pxPerMeter = 100;
+            let blockX = center + (x * pxPerMeter);
+            
+            // Spring
+            u6_sCtx.beginPath();
+            u6_sCtx.strokeStyle = '#555';
+            u6_sCtx.moveTo(20, 210); // Wall attach
+            for(let i=0; i<=20; i++) {
+                let sx = 20 + (i/20) * (blockX - 20);
+                let sy = 210 + (i%2==0 ? -10 : 10);
+                u6_sCtx.lineTo(sx, sy);
+            }
+            u6_sCtx.lineTo(blockX, 210);
+            u6_sCtx.stroke();
+
+            // Block
+            u6_sCtx.fillStyle = '#3498db';
+            u6_sCtx.fillRect(blockX, 190, 40, 40);
+
+            // Equilibrium Line
+            u6_sCtx.strokeStyle = 'green';
+            u6_sCtx.setLineDash([5,5]);
+            u6_sCtx.beginPath(); u6_sCtx.moveTo(center+20, 50); u6_sCtx.lineTo(center+20, 250); u6_sCtx.stroke();
+            u6_sCtx.setLineDash([]);
+
+
+            // Draw Graph
+            u6_state.data.push(x);
+            if(u6_state.data.length > 200) u6_state.data.shift();
+
+            u6_gCtx.clearRect(0,0,400,300);
+            u6_gCtx.strokeStyle = '#bdc3c7';
+            u6_gCtx.beginPath(); u6_gCtx.moveTo(0,150); u6_gCtx.lineTo(400,150); u6_gCtx.stroke(); // Center line
+
+            u6_gCtx.strokeStyle = '#e74c3c';
+            u6_gCtx.lineWidth = 2;
+            u6_gCtx.beginPath();
+            u6_state.data.forEach((val, i) => {
+                let plotX = 400 - (u6_state.data.length - i) * 2;
+                let plotY = 150 - (val * 80); 
+                if(i===0) u6_gCtx.moveTo(plotX, plotY);
+                else u6_gCtx.lineTo(plotX, plotY);
+            });
+            u6_gCtx.stroke();
+            u6_gCtx.fillStyle = '#333';
+            u6_gCtx.fillText("Position vs. Time", 10, 20);
+
+            globalAnimId = requestAnimationFrame(u6_loop);
+        }
+
+        // Initialize Menu
+        showMenu();
+
+    </script>
+</body>
+</html>
