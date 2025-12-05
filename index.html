@@ -103,20 +103,22 @@
             <button class="nav-btn" onclick="loadSim('4.1')">4.1 Conservation of Energy</button>
         </div>
 
-        <div class="unit-header" onclick="toggleMenu('u5-menu')">Unit 5: Momentum <span>▼</span></div>
-        <div id="u5-menu" class="sub-menu">
-            <button class="nav-btn" onclick="loadSim('5.1')">5.1 Elastic/Inelastic Collisions</button>
-        </div>
+<div class="unit-header" onclick="toggleMenu('u5-menu')">Unit 5: Momentum <span>▼</span></div>
+<div id="u5-menu" class="sub-menu">
+    <button class="nav-btn" onclick="loadSim('5.1')">5.1 Momentum & Impulse</button>
+    <button class="nav-btn" onclick="loadSim('5.2')">5.2 Conservation of Momentum</button>
+</div>
 
         <div class="unit-header" onclick="toggleMenu('u6-menu')">Unit 6: SHM <span>▼</span></div>
         <div id="u6-menu" class="sub-menu">
             <button class="nav-btn" onclick="loadSim('6.1')">6.1 Spring Mass Systems</button>
         </div>
 
-        <div class="unit-header" onclick="toggleMenu('u7-menu')">Unit 7: Torque <span>▼</span></div>
-        <div id="u7-menu" class="sub-menu">
-            <button class="nav-btn" onclick="loadSim('7.1')">7.1 Torque & Equilibrium</button>
-        </div>
+<div class="unit-header" onclick="toggleMenu('u7-menu')">Unit 7: Torque & Rotation <span>▼</span></div>
+<div id="u7-menu" class="sub-menu">
+    <button class="nav-btn" onclick="loadSim('7.1')">7.1 Torque & Equilibrium</button>
+    <button class="nav-btn" onclick="loadSim('7.2')">7.2 Rotational Inertia & Ang. Momentum</button>
+</div>
     </aside>
 
     <main id="main-view">
@@ -952,9 +954,11 @@
             case '3.2': setup_3_2(); break;
             // NEW UNITS
             case '4.1': setup_4_1(); break;
-            case '5.1': setup_5_1(); break;
+            case '5.1': setup_5_1(); break; // Now Impulse
+            case '5.2': setup_5_2(); break; // Now Conservation (Old 5.1)
             case '6.1': setup_6_1(); break;
-            case '7.1': setup_7_1(); break;
+            case '7.1': setup_7_1(); break; // Torque (Seesaw)
+            case '7.2': setup_7_2(); break; // Rotational Inertia (New)
         }
     }
 
@@ -1377,6 +1381,247 @@
         ctx.fillStyle = "white"; ctx.fillText(state.m2, x2-5, -10);
 
         ctx.restore();
+    }
+// ===============================================
+    // === UNIT 5.1: IMPULSE (New) ===
+    // ===============================================
+    function setup_5_1() {
+        document.getElementById('sim-title').innerText = "5.1 Momentum and Impulse";
+        document.getElementById('sim-desc').innerHTML = `
+            <h3>The Impulse-Momentum Theorem</h3>
+            <p>Impulse (<span class="var">J</span>) is the change in momentum. It is equal to the average Force multiplied by the time interval.
+            <br>Eq: <span class="var">J = F&Delta;t = &Delta;p = m&Delta;v</span>.
+            <br>Observe how a longer impact time reduces the force required to stop an object (like an airbag).</p>`;
+
+        document.getElementById('sim-controls').innerHTML = `
+            <div class="control-group">
+                <label>Mass (<i class="var">m</i>): <span id="v-m">2</span> kg</label>
+                <input type="range" id="in-m" min="1" max="10" value="2" oninput="reset_5_1()">
+            </div>
+            <div class="control-group">
+                <label>Initial Velocity (<i class="var">v<sub>i</sub></i>): <span id="v-vi">10</span> m/s</label>
+                <input type="range" id="in-vi" min="5" max="20" value="10" oninput="reset_5_1()">
+            </div>
+            <div class="control-group">
+                <label>Impact Duration (<i class="var">&Delta;t</i>): <span id="v-dt">1.0</span> s</label>
+                <input type="range" id="in-dt" min="0.1" max="2.0" step="0.1" value="1.0" oninput="reset_5_1()">
+            </div>
+            <button class="btn btn-green" onclick="state.running=!state.running; loop_5_1()">Crash!</button>
+            <button class="btn btn-red" onclick="reset_5_1()">Reset</button>
+            <div class="readout">Avg Force (<i class="var">F<sub>avg</sub></i>): <span id="out-f">0.0</span> N</div>
+        `;
+        reset_5_1();
+    }
+
+    function reset_5_1() {
+        state = {
+            m: parseFloat(document.getElementById('in-m').value),
+            vi: parseFloat(document.getElementById('in-vi').value),
+            dt: parseFloat(document.getElementById('in-dt').value),
+            x: 0, v: 0, t: 0, running: false, crashed: false
+        };
+        state.v = state.vi;
+        document.getElementById('v-m').innerText = state.m;
+        document.getElementById('v-vi').innerText = state.vi;
+        document.getElementById('v-dt').innerText = state.dt;
+        document.getElementById('out-f').innerText = "0.0";
+        draw_5_1();
+    }
+
+    function loop_5_1() {
+        if(!state.running || currentSim !== '5.1') return;
+        
+        // Simulating the crash phase
+        if (state.x < 500) {
+            state.x += state.v * 0.05; // Normal movement
+        } else if (!state.crashed) {
+            state.crashed = true;
+            state.crashStart = state.t;
+        }
+        
+        // Deceleration Phase (Impulse)
+        if (state.crashed) {
+             let progress = state.t - state.crashStart;
+             if (progress < state.dt) {
+                 // v = vi - (a * t)
+                 // a = vi / dt
+                 let a = state.vi / state.dt;
+                 state.v = state.vi - (a * progress);
+                 if(state.v < 0) state.v = 0;
+                 state.x += state.v * 0.05;
+                 
+                 // Show Force
+                 let F = (state.m * state.vi) / state.dt; // F = dp/dt
+                 document.getElementById('out-f').innerText = F.toFixed(1);
+             } else {
+                 state.v = 0;
+                 state.running = false;
+             }
+        }
+        
+        state.t += 0.05;
+        draw_5_1();
+        animId = requestAnimationFrame(loop_5_1);
+    }
+
+    function draw_5_1() {
+        ctx.clearRect(0,0,700,450);
+        
+        // Wall
+        ctx.fillStyle = "#7f8c8d"; ctx.fillRect(550, 100, 50, 200);
+        // Crumple Zone visualization
+        if(state.crashed && state.x > 500) {
+             ctx.fillStyle = "#e74c3c"; // Red impact
+             ctx.globalAlpha = 0.5;
+             ctx.fillRect(550, 100, 10, 200);
+             ctx.globalAlpha = 1.0;
+        }
+
+        // Cart
+        let w = 50;
+        // Crumple effect: make cart shorter as it impacts
+        if (state.x > 500) w = 50 - (state.x - 500);
+        if (w < 10) w = 10;
+
+        ctx.fillStyle = "#2980b9"; ctx.fillRect(state.x, 225, w, 40);
+        ctx.fillStyle = "white"; ctx.fillText(state.m+"kg", state.x+5, 250);
+
+        // Floor
+        ctx.beginPath(); ctx.moveTo(0, 265); ctx.lineTo(600, 265); ctx.stroke();
+    }
+
+    // ===============================================
+    // === UNIT 5.2: CONSERVATION (Renamed Old 5.1) ===
+    // ===============================================
+    function setup_5_2() {
+        // ... Calls the previous setup_5_1 logic ...
+        setup_5_1_OLD(); 
+        document.getElementById('sim-title').innerText = "5.2 Conservation of Momentum";
+    }
+    // Rename your old setup_5_1 function to setup_5_1_OLD in your code, or just copy the logic here.
+    // For simplicity in this paste, I will re-declare the logic for 5.2 here:
+    function setup_5_2() {
+        document.getElementById('sim-title').innerText = "5.2 Conservation of Momentum";
+        document.getElementById('sim-desc').innerHTML = `<h3>Elastic vs Inelastic Collisions</h3><p>Momentum is conserved in all collisions. Kinetic energy is only conserved in elastic collisions.</p>`;
+        // Re-use controls from previous 5.1 response...
+        document.getElementById('sim-controls').innerHTML = `
+            <div class="control-group"><label>Mass 1: <span id="v-m1">2</span>kg</label><input type="range" id="in-m1" min="1" max="5" value="2" oninput="reset_5_2()"></div>
+            <div class="control-group"><label>Mass 2: <span id="v-m2">2</span>kg</label><input type="range" id="in-m2" min="1" max="5" value="2" oninput="reset_5_2()"></div>
+            <div class="control-group"><label>Elasticity: <span id="v-e">1</span></label><input type="range" id="in-e" min="0" max="1" step="1" value="1" oninput="reset_5_2()"></div>
+            <button class="btn btn-green" onclick="state.running=!state.running; loop_5_2()">Collide</button>
+            <button class="btn btn-red" onclick="reset_5_2()">Reset</button>
+        `;
+        reset_5_2();
+    }
+    function reset_5_2() {
+        state = { m1: parseFloat(document.getElementById('in-m1').value), m2: parseFloat(document.getElementById('in-m2').value), e: parseFloat(document.getElementById('in-e').value), x1: 100, v1: 5, x2: 500, v2: -2, running: false };
+        document.getElementById('v-m1').innerText = state.m1; document.getElementById('v-m2').innerText = state.m2; document.getElementById('v-e').innerText = state.e;
+        draw_5_2();
+    }
+    function loop_5_2() {
+        if(!state.running || currentSim !== '5.2') return;
+        state.x1 += state.v1; state.x2 += state.v2;
+        let s1 = state.m1*15; let s2 = state.m2*15;
+        if(state.x1 + s1 >= state.x2) {
+             let v1i = state.v1; let v2i = state.v2; let m1 = state.m1; let m2 = state.m2;
+             if(state.e === 0) { let vf = (m1*v1i + m2*v2i)/(m1+m2); state.v1 = vf; state.v2 = vf; }
+             else { state.v1 = ((m1-m2)*v1i + 2*m2*v2i)/(m1+m2); state.v2 = ((m2-m1)*v2i + 2*m1*v1i)/(m1+m2); }
+             state.x1 = state.x2 - s1 - 1;
+        }
+        draw_5_2(); animId = requestAnimationFrame(loop_5_2);
+    }
+    function draw_5_2() {
+        ctx.clearRect(0,0,700,450); ctx.fillStyle = "#ddd"; ctx.fillRect(0,200,700,10);
+        let s1 = state.m1*15; let s2 = state.m2*15;
+        ctx.fillStyle = "#e74c3c"; ctx.fillRect(state.x1, 200-s1, s1, s1); ctx.fillText(state.v1.toFixed(1), state.x1, 190-s1);
+        ctx.fillStyle = "#3498db"; ctx.fillRect(state.x2, 200-s2, s2, s2); ctx.fillText(state.v2.toFixed(1), state.x2, 190-s2);
+    }
+
+
+    // ===============================================
+    // === UNIT 7.2: ANGULAR MOMENTUM (New) ===
+    // ===============================================
+    function setup_7_2() {
+        document.getElementById('sim-title').innerText = "7.2 Rotational Inertia & Angular Momentum";
+        document.getElementById('sim-desc').innerHTML = `
+            <h3>The "Figure Skater" Effect</h3>
+            <p>Angular Momentum (<span class="var">L = I&omega;</span>) is conserved. 
+            If you pull mass inward, Rotational Inertia (<span class="var">I</span>) decreases, causing Angular Velocity (<span class="var">&omega;</span>) to increase.
+            <br><i>Sim: Change the radius of the rotating masses.</i></p>`;
+
+        document.getElementById('sim-controls').innerHTML = `
+            <div class="control-group">
+                <label>Radius of Mass (<i class="var">r</i>): <span id="v-r">1.0</span> m</label>
+                <input type="range" id="in-r" min="0.2" max="2.0" step="0.1" value="1.0" oninput="update_7_2()">
+            </div>
+            <div class="readout">Inertia (<i class="var">I</i>): <span id="out-I">0.0</span> kg&middot;m²</div>
+            <div class="readout">Ang. Vel (<i class="var">&omega;</i>): <span id="out-w">0.0</span> rad/s</div>
+            <button class="btn btn-green" onclick="state.running=!state.running; loop_7_2()">Spin</button>
+        `;
+        
+        // Initial State: L is constant (set L = 10)
+        state = { 
+            L: 10, 
+            m: 2, // 2kg masses
+            r: 1.0, 
+            angle: 0, 
+            running: false 
+        };
+        update_7_2();
+    }
+
+    function update_7_2() {
+        if(currentSim !== '7.2') return;
+        state.r = parseFloat(document.getElementById('in-r').value);
+        
+        // I = mr^2 (for point masses) * 2 masses
+        state.I = 2 * state.m * state.r * state.r;
+        
+        // L = Iw  =>  w = L / I
+        state.w = state.L / state.I;
+
+        document.getElementById('v-r').innerText = state.r.toFixed(1);
+        document.getElementById('out-I').innerText = state.I.toFixed(2);
+        document.getElementById('out-w').innerText = state.w.toFixed(2);
+        draw_7_2();
+    }
+
+    function loop_7_2() {
+        if(!state.running || currentSim !== '7.2') return;
+        state.angle += state.w * 0.05;
+        draw_7_2();
+        animId = requestAnimationFrame(loop_7_2);
+    }
+
+    function draw_7_2() {
+        ctx.clearRect(0,0,700,450);
+        let cx = 350, cy = 225;
+        
+        // Center Pivot
+        ctx.fillStyle = "#333"; ctx.beginPath(); ctx.arc(cx, cy, 10, 0, Math.PI*2); ctx.fill();
+
+        // Arms
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(state.angle);
+
+        // Draw Rod
+        let armLen = state.r * 100; // Scale
+        ctx.strokeStyle = "#7f8c8d"; ctx.lineWidth = 5;
+        ctx.beginPath(); ctx.moveTo(-armLen, 0); ctx.lineTo(armLen, 0); ctx.stroke();
+
+        // Draw Masses
+        ctx.fillStyle = "#e67e22";
+        ctx.beginPath(); ctx.arc(-armLen, 0, 15, 0, Math.PI*2); ctx.fill(); // Left
+        ctx.beginPath(); ctx.arc(armLen, 0, 15, 0, Math.PI*2); ctx.fill(); // Right
+        
+        ctx.restore();
+        
+        // Speed lines if fast
+        if(state.w > 5) {
+            ctx.strokeStyle = "rgba(0,0,0,0.1)"; ctx.lineWidth=2;
+            ctx.beginPath(); ctx.arc(cx, cy, armLen, 0, Math.PI*2); ctx.stroke();
+        }
     }
 </script>
 
