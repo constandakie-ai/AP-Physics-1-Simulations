@@ -98,10 +98,25 @@
             <button class="nav-btn" onclick="loadSim('3.2')">3.2 Gravitation & Orbits</button>
         </div>
 
-        <div class="unit-header" style="opacity:0.5">Unit 4: Energy (Coming Soon)</div>
-        <div class="unit-header" style="opacity:0.5">Unit 5: Momentum (Coming Soon)</div>
-        <div class="unit-header" style="opacity:0.5">Unit 6: SHM (Coming Soon)</div>
-        <div class="unit-header" style="opacity:0.5">Unit 7: Torque (Coming Soon)</div>
+<div class="unit-header" onclick="toggleMenu('u4-menu')">Unit 4: Energy <span>▼</span></div>
+        <div id="u4-menu" class="sub-menu">
+            <button class="nav-btn" onclick="loadSim('4.1')">4.1 Conservation of Energy</button>
+        </div>
+
+        <div class="unit-header" onclick="toggleMenu('u5-menu')">Unit 5: Momentum <span>▼</span></div>
+        <div id="u5-menu" class="sub-menu">
+            <button class="nav-btn" onclick="loadSim('5.1')">5.1 Elastic/Inelastic Collisions</button>
+        </div>
+
+        <div class="unit-header" onclick="toggleMenu('u6-menu')">Unit 6: SHM <span>▼</span></div>
+        <div id="u6-menu" class="sub-menu">
+            <button class="nav-btn" onclick="loadSim('6.1')">6.1 Spring Mass Systems</button>
+        </div>
+
+        <div class="unit-header" onclick="toggleMenu('u7-menu')">Unit 7: Torque <span>▼</span></div>
+        <div id="u7-menu" class="sub-menu">
+            <button class="nav-btn" onclick="loadSim('7.1')">7.1 Torque & Equilibrium</button>
+        </div>
     </aside>
 
     <main id="main-view">
