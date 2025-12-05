@@ -3,829 +3,568 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AP Physics 1 Simulation Lab</title>
+    <title>AP Physics 1 Complete Simulation Suite</title>
     <style>
-        /* --- GLOBAL VARIABLES & RESET --- */
+        /* --- CORE THEME --- */
         :root {
             --primary: #2c3e50;
-            --accent: #3498db;
-            --bg: #f8f9fa;
-            --card-bg: #ffffff;
+            --accent: #2980b9;
             --text: #333;
+            --bg: #f4f6f7;
+            --panel-bg: #ffffff;
+            --math-font: 'Times New Roman', serif;
         }
-        * { box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: var(--bg); color: var(--text); margin: 0; display: flex; flex-direction: column; min-height: 100vh; }
-
-        /* --- TYPOGRAPHY FOR PHYSICS --- */
-        .var { font-style: italic; font-family: 'Times New Roman', serif; }
-        .unit { font-family: sans-serif; font-style: normal; font-size: 0.9em; color: #555; }
-        sub { font-size: 0.7em; }
-
-        /* --- NAVIGATION --- */
-        nav { background: var(--primary); padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; color: white; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .nav-brand { font-size: 1.4rem; font-weight: bold; }
-        .back-btn { background: rgba(255,255,255,0.15); border: none; color: white; padding: 8px 16px; border-radius: 4px; cursor: pointer; display: none; font-size: 0.9rem; transition: background 0.2s; }
-        .back-btn:hover { background: rgba(255,255,255,0.3); }
-
-        /* --- VIEWS CONTAINER --- */
-        .view-container { flex: 1; padding: 20px; display: flex; flex-direction: column; align-items: center; width: 100%; max-width: 1200px; margin: 0 auto; }
-        .hidden { display: none !important; }
-
-        /* --- MENU GRID --- */
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 25px; width: 100%; margin-top: 20px; }
-        .card { background: var(--card-bg); padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; border-left: 6px solid var(--accent); display: flex; flex-direction: column; }
-        .card:hover { transform: translateY(-5px); box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
-        .card h2 { margin: 0 0 10px 0; color: var(--primary); }
-        .tag { display: inline-block; background: #e3f2fd; color: #1565c0; padding: 4px 10px; border-radius: 15px; font-size: 0.8rem; font-weight: bold; margin-bottom: 10px; width: fit-content; }
-
-        /* --- SIMULATION UI --- */
-        .sim-layout { display: flex; flex-wrap: wrap; gap: 20px; width: 100%; justify-content: center; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
         
-        /* Sidebar Controls */
-        .controls { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); min-width: 280px; flex: 1; max-width: 350px; h-height: fit-content; }
-        .control-group { margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 15px; }
-        .control-group:last-child { border-bottom: none; }
-        label { display: flex; justify-content: space-between; margin-bottom: 5px; font-weight: 500; font-size: 0.95rem; }
+        /* --- LAYOUT --- */
+        #app-container { display: flex; height: 100%; }
+        
+        /* SIDEBAR NAVIGATION */
+        aside { width: 260px; background: var(--primary); color: white; display: flex; flex-direction: column; overflow-y: auto; flex-shrink: 0; }
+        aside h1 { padding: 20px; font-size: 1.2rem; margin: 0; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .unit-header { padding: 15px 20px; font-weight: bold; background: rgba(0,0,0,0.2); cursor: pointer; display: flex; justify-content: space-between; font-size: 0.9rem; }
+        .unit-header:hover { background: rgba(0,0,0,0.3); }
+        .sub-menu { display: none; background: #34495e; }
+        .sub-menu.open { display: block; }
+        .nav-btn { width: 100%; text-align: left; padding: 12px 30px; background: none; border: none; color: #bdc3c7; cursor: pointer; font-size: 0.85rem; transition: 0.2s; border-left: 3px solid transparent; }
+        .nav-btn:hover { color: white; background: rgba(255,255,255,0.05); }
+        .nav-btn.active { color: white; border-left-color: var(--accent); background: rgba(0,0,0,0.2); }
+
+        /* MAIN CONTENT AREA */
+        main { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; }
+        
+        /* SIMULATION CONTAINER */
+        .sim-container { display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-start; }
+        .canvas-area { position: relative; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1); background: white; }
+        canvas { display: block; cursor: crosshair; }
+        
+        /* CONTROLS PANEL */
+        .controls { background: var(--panel-bg); padding: 20px; border-radius: 8px; width: 300px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); flex-shrink: 0; }
+        .control-group { margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        label { display: flex; justify-content: space-between; font-size: 0.9rem; font-weight: 500; margin-bottom: 5px; color: #555; }
         input[type=range] { width: 100%; cursor: pointer; }
         
-        /* Canvas Area */
-        .canvas-wrapper { position: relative; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border: 1px solid #ddd; background: white; }
-        canvas { display: block; background: white; cursor: crosshair; }
+        /* DESCRIPTION BOX */
+        .desc-box { background: white; padding: 20px; border-radius: 8px; border-left: 5px solid var(--accent); line-height: 1.6; color: #444; max-width: 900px; }
+        .desc-box h3 { margin-top: 0; color: var(--primary); }
+
+        /* MATH TYPOGRAPHY */
+        .var { font-family: var(--math-font); font-style: italic; }
+        .unit { font-family: sans-serif; font-style: normal; font-size: 0.85em; color: #7f8c8d; }
+
+        /* UTILITY CLASSES */
+        .hidden { display: none !important; }
+        .btn { width: 100%; padding: 10px; border: none; border-radius: 4px; color: white; font-weight: bold; cursor: pointer; margin-top: 5px; }
+        .btn-green { background: #27ae60; } .btn-green:hover { background: #219150; }
+        .btn-red { background: #c0392b; } .btn-red:hover { background: #a93226; }
         
-        /* Buttons */
-        .btn-row { display: flex; gap: 10px; margin-top: 10px; }
-        .btn { flex: 1; padding: 10px; border: none; border-radius: 6px; color: white; font-weight: bold; cursor: pointer; transition: opacity 0.2s; }
-        .btn:hover { opacity: 0.9; }
-        .btn-play { background: #27ae60; }
-        .btn-reset { background: #c0392b; }
-        .btn-step { background: #f39c12; }
+        /* DATA READOUT */
+        .readout { font-family: monospace; background: #eee; padding: 10px; border-radius: 4px; margin-top: 10px; font-size: 0.85rem; }
 
-        /* --- UNIT 1 TABS --- */
-        .tabs { display: flex; gap: 5px; margin-bottom: 20px; overflow-x: auto; width: 100%; padding-bottom: 5px; }
-        .tab-btn { padding: 10px 15px; background: #e0e0e0; border: none; border-radius: 4px; cursor: pointer; white-space: nowrap; font-weight: 500; }
-        .tab-btn.active { background: var(--primary); color: white; }
+        /* --- THEME VARIATIONS --- */
+        /* Space Theme for Unit 3 */
+        .theme-space .canvas-area { background: #000; border: 1px solid #333; }
+        .theme-space .controls { background: #1a1a1a; color: #ddd; }
+        .theme-space label { color: #bbb; }
+        .theme-space .readout { background: #333; color: #0f0; }
 
-        /* --- OVERLAYS --- */
-        .overlay-msg { position: absolute; top: 10px; left: 10px; background: rgba(255,255,255,0.9); padding: 5px 10px; border-radius: 4px; pointer-events: none; font-size: 0.8rem; border: 1px solid #ccc; }
+        /* Lab Theme for Unit 2 */
+        .theme-lab .canvas-area { background: #f0f3f5; border: 4px solid #bdc3c7; }
     </style>
 </head>
 <body>
 
-    <!-- === NAVIGATION === -->
-    <nav>
-        <div class="nav-brand">AP Physics 1 Lab</div>
-        <button id="back-btn" class="back-btn" onclick="goHome()">← Back to Menu</button>
-    </nav>
-
-    <!-- === MAIN MENU === -->
-    <div id="menu-view" class="view-container">
-        <h1 style="color: var(--primary);">Select a Unit</h1>
-        <p>Interactive simulations aligned with College Board topics.</p>
+<div id="app-container">
+    <aside>
+        <h1>AP Physics 1 Lab</h1>
         
-        <div class="grid">
-            <!-- Unit 1 -->
-            <div class="card" onclick="loadUnit(1)">
-                <span class="tag">Unit 1</span>
-                <h2>Kinematics</h2>
-                <p>1D Motion, Vectors, Graphs, and Projectile Motion with pan/zoom controls.</p>
-            </div>
-            <!-- Unit 2 -->
-            <div class="card" onclick="loadUnit(2)">
-                <span class="tag">Unit 2</span>
-                <h2>Dynamics</h2>
-                <p>Forces, Newton's Laws, and Inclined Planes with Friction.</p>
-            </div>
-            <!-- Unit 6 -->
-            <div class="card" onclick="loadUnit(6)">
-                <span class="tag">Unit 6</span>
-                <h2>Simple Harmonic Motion</h2>
-                <p>Springs, Pendulums, Period, and Frequency.</p>
-            </div>
+        <div class="unit-header" onclick="toggleMenu('u1-menu')">Unit 1: Kinematics <span>▼</span></div>
+        <div id="u1-menu" class="sub-menu open">
+            <button class="nav-btn active" onclick="loadSim('1.1')">1.1 Position & Velocity</button>
+            <button class="nav-btn" onclick="loadSim('1.2')">1.2 Acceleration (1D)</button>
+            <button class="nav-btn" onclick="loadSim('1.3')">1.3 Projectile Motion</button>
         </div>
-    </div>
 
-    <!-- === UNIT 1: KINEMATICS === -->
-    <div id="unit1-view" class="view-container hidden">
-        <h2>Unit 1: Kinematics</h2>
+        <div class="unit-header" onclick="toggleMenu('u2-menu')">Unit 2: Dynamics <span>▼</span></div>
+        <div id="u2-menu" class="sub-menu">
+            <button class="nav-btn" onclick="loadSim('2.1')">2.1 Newton's 2nd Law</button>
+            <button class="nav-btn" onclick="loadSim('2.2')">2.2 Inclined Planes</button>
+            <button class="nav-btn" onclick="loadSim('2.3')">2.3 Connected Systems</button>
+        </div>
+
+        <div class="unit-header" onclick="toggleMenu('u3-menu')">Unit 3: Circ. Motion <span>▼</span></div>
+        <div id="u3-menu" class="sub-menu">
+            <button class="nav-btn" onclick="loadSim('3.1')">3.1 Uniform Circ. Motion</button>
+            <button class="nav-btn" onclick="loadSim('3.2')">3.2 Gravitation & Orbits</button>
+        </div>
+
+        <div class="unit-header" style="opacity:0.5">Unit 4: Energy (Coming Soon)</div>
+        <div class="unit-header" style="opacity:0.5">Unit 5: Momentum (Coming Soon)</div>
+        <div class="unit-header" style="opacity:0.5">Unit 6: SHM (Coming Soon)</div>
+        <div class="unit-header" style="opacity:0.5">Unit 7: Torque (Coming Soon)</div>
+    </aside>
+
+    <main id="main-view">
+        <h2 id="sim-title" style="margin-top:0; color: var(--primary);">Welcome</h2>
         
-        <!-- Tab Navigation -->
-        <div class="tabs">
-            <button class="tab-btn active" onclick="u1_switchTab(0)">1.1 Position & Velocity</button>
-            <button class="tab-btn" onclick="u1_switchTab(1)">1.2 Graphs</button>
-            <button class="tab-btn" onclick="u1_switchTab(2)">1.3 Vectors</button>
-            <button class="tab-btn" onclick="u1_switchTab(3)">1.4 Ref Frames</button>
-            <button class="tab-btn" onclick="u1_switchTab(4)">1.5 Projectiles</button>
+        <div id="sim-desc" class="desc-box">
+            Select a simulation from the menu to begin.
         </div>
 
-        <!-- U1 Sim Container -->
-        <div class="sim-layout">
-            <div class="controls" id="u1-controls">
-                <!-- Controls injected dynamically via JS based on tab -->
+        <div class="sim-container hidden" id="sim-interface">
+            <div class="canvas-area">
+                <canvas id="sim-canvas" width="700" height="450"></canvas>
             </div>
             
-            <div class="canvas-wrapper">
-                <canvas id="u1-canvas" width="700" height="450"></canvas>
-                <div id="u1-overlay" class="overlay-msg"></div>
-            </div>
+            <div id="sim-controls" class="controls"></div>
         </div>
-    </div>
+    </main>
+</div>
 
-    <!-- === UNIT 2: DYNAMICS === -->
-    <div id="unit2-view" class="view-container hidden">
-        <h2>Unit 2: Dynamics (Inclined Plane)</h2>
-        <div class="sim-layout">
-            <div class="controls">
-                <div class="control-group">
-                    <label>Mass (<i class="var">m</i>): <span id="u2-m-val"></span> <span class="unit">kg</span></label>
-                    <input type="range" id="u2-m" min="1" max="10" step="0.5" value="2" oninput="u2_update()">
-                </div>
-                <div class="control-group">
-                    <label>Angle (&theta;): <span id="u2-theta-val"></span>&deg;</label>
-                    <input type="range" id="u2-theta" min="0" max="60" step="1" value="30" oninput="u2_update()">
-                </div>
-                <div class="control-group">
-                    <label>Coeff. Friction (<i class="var">&mu;</i>): <span id="u2-mu-val"></span></label>
-                    <input type="range" id="u2-mu" min="0" max="0.8" step="0.05" value="0.1" oninput="u2_update()">
-                </div>
-                
-                <div style="background: #f0f0f0; padding: 10px; border-radius: 4px; margin-top:10px;">
-                    <div>Net Force (<i class="var">F<sub>net</sub></i>): <span id="u2-fnet">0</span> N</div>
-                    <div>Accel (<i class="var">a</i>): <span id="u2-acc">0</span> m/s²</div>
-                </div>
+<script>
+    // === GLOBAL ENGINE ===
+    const canvas = document.getElementById('sim-canvas');
+    const ctx = canvas.getContext('2d');
+    let currentSim = null;
+    let animId = null;
+    
+    // Sim State Object (Reset on every load)
+    let state = {};
 
-                <div class="btn-row">
-                    <button class="btn btn-play" onclick="u2_toggle()">Play / Pause</button>
-                    <button class="btn btn-reset" onclick="u2_reset()">Reset</button>
-                </div>
-            </div>
-            
-            <div class="canvas-wrapper">
-                <canvas id="u2-canvas" width="700" height="450"></canvas>
-            </div>
-        </div>
-    </div>
+    function toggleMenu(id) {
+        document.getElementById(id).classList.toggle('open');
+    }
 
-    <!-- === UNIT 6: SHM === -->
-    <div id="unit6-view" class="view-container hidden">
-        <h2>Unit 6: Simple Harmonic Motion</h2>
-        <div class="sim-layout">
-            <div class="controls">
-                <div class="control-group">
-                    <label>Mass (<i class="var">m</i>): <span id="u6-m-val"></span> <span class="unit">kg</span></label>
-                    <input type="range" id="u6-m" min="0.5" max="5.0" step="0.1" value="1.0" oninput="u6_update()">
-                </div>
-                <div class="control-group">
-                    <label>Spring Constant (<i class="var">k</i>): <span id="u6-k-val"></span> <span class="unit">N/m</span></label>
-                    <input type="range" id="u6-k" min="10" max="100" step="5" value="20" oninput="u6_update()">
-                </div>
-                <div class="control-group">
-                    <label>Amplitude (<i class="var">A</i>): <span id="u6-amp-val"></span> <span class="unit">m</span></label>
-                    <input type="range" id="u6-amp" min="0.1" max="1.5" step="0.1" value="0.8" oninput="u6_update()">
-                </div>
-                
-                <div style="background: #f0f0f0; padding: 10px; border-radius: 4px;">
-                    <div>Period (<i class="var">T</i>): <span id="u6-period"></span> s</div>
-                    <div>Freq (<i class="var">f</i>): <span id="u6-freq"></span> Hz</div>
-                </div>
+    function stopSim() {
+        if(animId) cancelAnimationFrame(animId);
+        animId = null;
+    }
 
-                <div class="btn-row">
-                    <button class="btn btn-play" onclick="u6_toggle()">Play / Pause</button>
-                </div>
-            </div>
-            
-            <div class="canvas-wrapper" style="display:flex; flex-direction: column;">
-                <canvas id="u6-canvas" width="600" height="300"></canvas>
-                <canvas id="u6-graph" width="600" height="150" style="border-top: 1px solid #ccc;"></canvas>
-            </div>
-        </div>
-    </div>
+    // === SIMULATION LOADER ===
+    function loadSim(id) {
+        stopSim();
+        currentSim = id;
+        
+        // UI Reset
+        document.getElementById('sim-interface').classList.remove('hidden');
+        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+        event.target.classList.add('active'); // Highlight button
+        document.getElementById('main-view').className = ''; // Reset themes
 
-    <script>
-        // === GLOBAL STATE MANAGEMENT ===
-        let currentUnit = 0;
-        let animationId = null;
-        let lastTime = 0;
-
-        // View Switching
-        function goHome() {
-            stopAll();
-            document.querySelectorAll('.view-container').forEach(el => el.classList.add('hidden'));
-            document.getElementById('menu-view').classList.remove('hidden');
-            document.getElementById('back-btn').style.display = 'none';
+        // Logic Switch
+        switch(id) {
+            case '1.1': setup_1_1(); break;
+            case '1.2': setup_1_2(); break;
+            case '1.3': setup_1_3(); break;
+            case '2.1': setup_2_1(); break;
+            case '2.2': setup_2_2(); break;
+            case '2.3': setup_2_3(); break;
+            case '3.1': setup_3_1(); break;
+            case '3.2': setup_3_2(); break;
         }
+    }
 
-        function loadUnit(unit) {
-            stopAll();
-            currentUnit = unit;
-            document.querySelectorAll('.view-container').forEach(el => el.classList.add('hidden'));
-            document.getElementById('menu-view').classList.add('hidden');
-            document.getElementById('back-btn').style.display = 'block';
+    // ===============================================
+    // === UNIT 1: KINEMATICS (Clean, Vector Focus) ===
+    // ===============================================
 
-            if(unit === 1) {
-                document.getElementById('unit1-view').classList.remove('hidden');
-                u1_switchTab(0); // Default to first tab
-            }
-            if(unit === 2) {
-                document.getElementById('unit2-view').classList.remove('hidden');
-                u2_init();
-            }
-            if(unit === 6) {
-                document.getElementById('unit6-view').classList.remove('hidden');
-                u6_init();
-            }
-        }
+    // --- 1.1 Position & Velocity ---
+    function setup_1_1() {
+        document.getElementById('sim-title').innerText = "1.1 Position and Constant Velocity";
+        document.getElementById('sim-desc').innerHTML = `
+            <h3>Understanding Displacement</h3>
+            <p>This simulation visualizes the relationship between position (<span class="var">x</span>) and constant velocity (<span class="var">v</span>). 
+            Observe how the velocity vector (red arrow) dictates the rate of change of the position vector (blue arrow).
+            The motion is 1-Dimensional.</p>`;
+        
+        // Controls
+        document.getElementById('sim-controls').innerHTML = `
+            <div class="control-group">
+                <label>Velocity (<i class="var">v</i>): <span id="val-v">5</span> m/s</label>
+                <input type="range" id="in-v" min="-10" max="10" value="5" oninput="state.v=parseFloat(this.value); updateReadout()">
+            </div>
+            <div class="control-group">
+                <label>Start Pos (<i class="var">x<sub>0</sub></i>): <span id="val-x">0</span> m</label>
+                <input type="range" id="in-x" min="-50" max="50" value="0" oninput="state.x=parseFloat(this.value); updateReadout(); draw_1_1()">
+            </div>
+            <button class="btn btn-green" onclick="state.running=!state.running; loop_1_1()">Start / Stop</button>
+            <div class="readout">Time: <span id="out-t">0.0</span>s <br> Pos: <span id="out-x">0.0</span>m</div>
+        `;
 
-        function stopAll() {
-            cancelAnimationFrame(animationId);
-            animationId = null;
-        }
+        // Init State
+        state = { x: 0, v: 5, t: 0, running: false };
+        draw_1_1();
+    }
 
-        // =========================================
-        // === UNIT 1: KINEMATICS LAB (5 SECTIONS) ===
-        // =========================================
-        const u1_canvas = document.getElementById('u1-canvas');
-        const u1_ctx = u1_canvas.getContext('2d');
-        let u1_tab = 0;
-        let u1_state = { 
-            // Shared State
-            t: 0, running: false, 
-            // 1.1 & 1.2
-            x: 0, v: 0, a: 0,
-            // 1.5 Projectile & Camera
-            px: 0, py: 0, vx: 0, vy: 0, trail: [],
-            camX: 0, camY: 0, scale: 1, isDragging: false, lastMouse: {x:0, y:0}
+    function loop_1_1() {
+        if(!state.running || currentSim !== '1.1') return;
+        state.t += 0.02;
+        state.x += state.v * 0.02;
+        updateReadout();
+        draw_1_1();
+        animId = requestAnimationFrame(loop_1_1);
+    }
+
+    function draw_1_1() {
+        ctx.clearRect(0,0,700,450);
+        // Grid
+        drawGrid(50);
+        // Axis
+        ctx.beginPath(); ctx.moveTo(0, 225); ctx.lineTo(700, 225); ctx.stroke();
+        
+        // Object
+        let px = 350 + (state.x * 5); // Scale 5px = 1m
+        drawCar(px, 225, state.v);
+
+        // Position Vector
+        drawVector(350, 225, px - 350, 0, "blue", "x");
+    }
+
+    // --- 1.3 Projectile Motion ---
+    function setup_1_3() {
+        document.getElementById('sim-title').innerText = "1.3 Projectile Motion";
+        document.getElementById('sim-desc').innerHTML = `
+            <h3>Independence of Motion</h3>
+            <p>Projectiles move in two dimensions simultaneously. The horizontal motion (<span class="var">x</span>) is constant velocity, while the vertical motion (<span class="var">y</span>) is affected by gravity (<span class="var">g</span>). 
+            Use this tool to separate components and visualize the trajectory.</p>`;
+        
+        document.getElementById('sim-controls').innerHTML = `
+             <div class="control-group">
+                <label>Initial V (<i class="var">v<sub>i</sub></i>): <span id="val-vi">25</span> m/s</label>
+                <input type="range" id="in-vi" min="10" max="40" value="25" oninput="state.vi=parseFloat(this.value); reset_1_3()">
+            </div>
+            <div class="control-group">
+                <label>Angle (<i class="var">&theta;</i>): <span id="val-th">45</span>&deg;</label>
+                <input type="range" id="in-th" min="0" max="90" value="45" oninput="state.th=parseFloat(this.value); reset_1_3()">
+            </div>
+            <button class="btn btn-green" onclick="state.running=true; loop_1_3()">Launch</button>
+            <button class="btn btn-red" onclick="reset_1_3()">Reset</button>
+            <div class="readout">Range: <span id="out-r">0.0</span>m <br> Height: <span id="out-h">0.0</span>m</div>
+        `;
+        reset_1_3();
+    }
+
+    function reset_1_3() {
+        state = { 
+            vi: parseFloat(document.getElementById('in-vi')?.value || 25), 
+            th: parseFloat(document.getElementById('in-th')?.value || 45),
+            t: 0, x: 0, y: 0, running: false, trail: [] 
         };
+        // Update labels
+        document.getElementById('val-vi').innerText = state.vi;
+        document.getElementById('val-th').innerText = state.th;
+        draw_1_3();
+    }
 
-        // Tab Content Config
-        function u1_switchTab(index) {
-            stopAll();
-            u1_tab = index;
-            u1_state.running = false;
-            u1_state.t = 0;
-            
-            // Reset Camera
-            u1_state.camX = 0; u1_state.camY = 0; u1_state.scale = 1;
+    function loop_1_3() {
+        if(!state.running || currentSim !== '1.3') return;
+        let dt = 0.05;
+        state.t += dt;
+        let rad = state.th * Math.PI/180;
+        
+        // Physics
+        state.x = (state.vi * Math.cos(rad)) * state.t;
+        state.y = (state.vi * Math.sin(rad) * state.t) - (0.5 * 9.8 * state.t**2);
+        
+        state.trail.push({x: state.x, y: state.y});
 
-            // Highlight Tab
-            document.querySelectorAll('.tab-btn').forEach((b, i) => {
-                b.className = i === index ? 'tab-btn active' : 'tab-btn';
-            });
+        if(state.y < 0) { state.y = 0; state.running = false; }
+        
+        // Data
+        document.getElementById('out-r').innerText = state.x.toFixed(1);
+        document.getElementById('out-h').innerText = Math.max(0, state.y).toFixed(1);
 
-            // Inject Controls based on Tab
-            const panel = document.getElementById('u1-controls');
-            panel.innerHTML = ''; // Clear
+        draw_1_3();
+        if(state.running) animId = requestAnimationFrame(loop_1_3);
+    }
 
-            if(index === 0) { // 1D Motion
-                u1_state.x = 0; u1_state.v = 10; u1_state.a = 0;
-                document.getElementById('u1-overlay').innerText = "Simulating constant acceleration in 1D.";
-                panel.innerHTML = `
-                    <div class="control-group">
-                        <label>Init Velocity (<i class="var">v<sub>i</sub></i>): <span id="u1-v-val">10</span> m/s</label>
-                        <input type="range" id="u1-v" min="-20" max="20" value="10" oninput="u1_updateParams()">
-                    </div>
-                    <div class="control-group">
-                        <label>Acceleration (<i class="var">a</i>): <span id="u1-a-val">0</span> m/s²</label>
-                        <input type="range" id="u1-a" min="-10" max="10" step="0.5" value="0" oninput="u1_updateParams()">
-                    </div>
-                    <div class="btn-row"><button class="btn btn-play" onclick="u1_toggle()">Play/Pause</button><button class="btn btn-reset" onclick="u1_reset()">Reset</button></div>
-                    <div style="margin-top:10px;">Pos (<i class="var">x</i>): <span id="u1-readout-x">0</span> m</div>
-                `;
-            } else if (index === 1) { // Graphs
-                document.getElementById('u1-overlay').innerText = "Visualize x vs t, v vs t graphs.";
-                u1_state.x = 0; u1_state.v = 5; u1_state.a = 0; u1_state.trail = [];
-                panel.innerHTML = `
-                     <div class="control-group">
-                        <label>Velocity (<i class="var">v</i>): <span id="u1-v-val">5</span> m/s</label>
-                        <input type="range" id="u1-v" min="-10" max="10" value="5" oninput="u1_updateParams()">
-                    </div>
-                    <div class="btn-row"><button class="btn btn-play" onclick="u1_toggle()">Play/Pause</button><button class="btn btn-reset" onclick="u1_reset()">Reset</button></div>
-                `;
-            } else if (index === 2) { // Vectors
-                document.getElementById('u1-overlay').innerText = "Drag slider to see components.";
-                u1_state.vx = 10; u1_state.vy = 10;
-                panel.innerHTML = `
-                    <div class="control-group">
-                        <label>Magnitude: <span id="u1-mag">14.1</span></label>
-                        <input type="range" id="u1-vec-mag" min="0" max="20" value="14.1" oninput="u1_vecUpdate()">
-                    </div>
-                     <div class="control-group">
-                        <label>Angle (&theta;): <span id="u1-vec-ang">45</span>&deg;</label>
-                        <input type="range" id="u1-vec-deg" min="0" max="360" value="45" oninput="u1_vecUpdate()">
-                    </div>
-                `;
-            } else if (index === 3) { // Ref Frames
-                 document.getElementById('u1-overlay').innerText = "River crossing problem.";
-                 u1_state.vx = 4; // Boat speed
-                 u1_state.vy = 3; // River speed (acting on y for visualization)
-                 panel.innerHTML = `
-                    <div class="control-group"><label>Boat Speed: <span id="u1-vb-val">4</span></label><input type="range" id="u1-vb" min="0" max="10" value="4" oninput="u1_rfUpdate()"></div>
-                    <div class="control-group"><label>River Speed: <span id="u1-vr-val">3</span></label><input type="range" id="u1-vr" min="0" max="10" value="3" oninput="u1_rfUpdate()"></div>
-                    <div class="btn-row"><button class="btn btn-play" onclick="u1_toggle()">Start Crossing</button><button class="btn btn-reset" onclick="u1_reset()">Reset</button></div>
-                 `;
-            } else if (index === 4) { // Projectile (Complex)
-                u1_setupProjectileUI(panel);
-                u1_reset(); // Set initial state
-            }
-            
-            u1_draw(); // Initial draw
+    function draw_1_3() {
+        ctx.clearRect(0,0,700,450);
+        // Ground
+        ctx.fillStyle = "#ecf0f1"; ctx.fillRect(0, 400, 700, 50);
+        
+        // Trajectory
+        ctx.beginPath(); ctx.strokeStyle = "#95a5a6"; ctx.setLineDash([5,5]);
+        state.trail.forEach((p,i) => {
+            let sx = 20 + p.x * 5; let sy = 400 - p.y * 5;
+            if(i==0) ctx.moveTo(sx, sy); else ctx.lineTo(sx, sy);
+        });
+        ctx.stroke(); ctx.setLineDash([]);
+
+        // Ball
+        let sx = 20 + state.x * 5;
+        let sy = 400 - state.y * 5;
+        ctx.fillStyle = "#e74c3c"; ctx.beginPath(); ctx.arc(sx, sy, 6, 0, Math.PI*2); ctx.fill();
+
+        // Component Vectors
+        if(state.running || state.y > 0) {
+            let vx = state.vi * Math.cos(state.th * Math.PI/180);
+            let vy = state.vi * Math.sin(state.th * Math.PI/180) - (9.8 * state.t);
+            drawVector(sx, sy, vx*2, 0, "blue"); // Vx
+            drawVector(sx, sy, 0, -vy*2, "green"); // Vy (Note: negative y is up in canvas logic for vectors usually, but here sy is canvas coord)
         }
+    }
 
-        // --- U1 Specific Logic ---
+    // ===============================================
+    // === UNIT 2: DYNAMICS (Lab Bench Theme) ===
+    // ===============================================
 
-        function u1_setupProjectileUI(panel) {
-            document.getElementById('u1-overlay').innerText = "Drag to pan. Scroll to zoom. Scrubber for time.";
-            panel.innerHTML = `
-                <div class="control-group">
-                    <label>Init Velocity (<i class="var">v<sub>i</sub></i>): <span id="u1-vi-val">20</span> m/s</label>
-                    <input type="range" id="u1-vi" min="1" max="50" value="20" oninput="u1_projUpdate()">
-                </div>
-                <div class="control-group">
-                    <label>Angle (&theta;): <span id="u1-theta-val">45</span>&deg;</label>
-                    <input type="range" id="u1-theta" min="0" max="90" value="45" oninput="u1_projUpdate()">
-                </div>
-                <div class="control-group">
-                    <label>Height (&Delta;<i class="var">y</i>): <span id="u1-dy-val">0</span> m</label>
-                    <input type="range" id="u1-dy" min="0" max="50" value="0" oninput="u1_projUpdate()">
-                </div>
-                <div class="control-group">
-                     <label>Time Scrubber: <span id="u1-time-val">0.0</span>s</label>
-                     <input type="range" id="u1-scrubber" min="0" max="10" step="0.05" value="0" oninput="u1_scrub()">
-                </div>
-                <div class="btn-row">
-                    <button class="btn btn-play" onclick="u1_toggle()">Launch</button>
-                    <button class="btn btn-reset" onclick="u1_reset()">Reset</button>
-                </div>
-            `;
-            // Add Mouse Events for Pan/Zoom
-            u1_canvas.onmousedown = (e) => { u1_state.isDragging = true; u1_state.lastMouse = {x:e.offsetX, y:e.offsetY}; };
-            u1_canvas.onmouseup = () => u1_state.isDragging = false;
-            u1_canvas.onmouseout = () => u1_state.isDragging = false;
-            u1_canvas.onmousemove = (e) => {
-                if(u1_state.isDragging) {
-                    u1_state.camX += e.offsetX - u1_state.lastMouse.x;
-                    u1_state.camY += e.offsetY - u1_state.lastMouse.y;
-                    u1_state.lastMouse = {x:e.offsetX, y:e.offsetY};
-                    u1_draw();
-                }
-            };
-            u1_canvas.onwheel = (e) => {
-                e.preventDefault();
-                const zoomSpeed = 0.001;
-                u1_state.scale += -e.deltaY * zoomSpeed * u1_state.scale;
-                u1_state.scale = Math.max(0.1, Math.min(u1_state.scale, 5));
-                u1_draw();
-            };
-        }
+    function setup_2_2() {
+        document.getElementById('main-view').classList.add('theme-lab'); // CSS class
+        document.getElementById('sim-title').innerText = "2.2 Inclined Planes";
+        document.getElementById('sim-desc').innerHTML = `
+            <h3>Forces on a Slope</h3>
+            <p>On an incline, gravity (<span class="var">F<sub>g</sub></span>) is resolved into perpendicular and parallel components. 
+            Friction (<span class="var">F<sub>f</sub></span>) opposes motion. Adjust the coefficient of friction (<span class="var">&mu;</span>) and angle (<span class="var">&theta;</span>) to see if the block slides.</p>`;
 
-        function u1_updateParams() {
-            if(u1_tab === 0 || u1_tab === 1) {
-                u1_state.v = parseFloat(document.getElementById('u1-v').value);
-                document.getElementById('u1-v-val').innerText = u1_state.v;
-                if(document.getElementById('u1-a')) {
-                    u1_state.a = parseFloat(document.getElementById('u1-a').value);
-                    document.getElementById('u1-a-val').innerText = u1_state.a;
-                }
-            }
-        }
+        document.getElementById('sim-controls').innerHTML = `
+            <div class="control-group">
+                <label>Mass (<i class="var">m</i>): <span id="val-m">2</span> kg</label>
+                <input type="range" id="in-m" min="1" max="10" value="2" oninput="state.m=parseFloat(this.value); draw_2_2()">
+            </div>
+            <div class="control-group">
+                <label>Angle (<i class="var">&theta;</i>): <span id="val-a">30</span>&deg;</label>
+                <input type="range" id="in-a" min="0" max="60" value="30" oninput="state.angle=parseFloat(this.value); draw_2_2()">
+            </div>
+            <div class="control-group">
+                <label>Friction (<i class="var">&mu;</i>): <span id="val-mu">0.3</span></label>
+                <input type="range" id="in-mu" min="0" max="1.0" step="0.1" value="0.3" oninput="state.mu=parseFloat(this.value); draw_2_2()">
+            </div>
+            <button class="btn btn-green" onclick="state.running=!state.running; loop_2_2()">Slide</button>
+            <div class="readout">Net Force: <span id="out-f">0.0</span> N</div>
+        `;
+        
+        state = { m: 2, angle: 30, mu: 0.3, x: 0, v: 0, running: false };
+        draw_2_2();
+    }
 
-        function u1_projUpdate() {
-            // Just update UI values, don't change physics if running
-            document.getElementById('u1-vi-val').innerText = document.getElementById('u1-vi').value;
-            document.getElementById('u1-theta-val').innerText = document.getElementById('u1-theta').value;
-            document.getElementById('u1-dy-val').innerText = document.getElementById('u1-dy').value;
-            if(!u1_state.running) u1_draw();
-        }
+    function loop_2_2() {
+        if(!state.running || currentSim !== '2.2') return;
+        
+        let g = 9.8;
+        let rad = state.angle * Math.PI/180;
+        let Fgx = state.m * g * Math.sin(rad);
+        let Fgy = state.m * g * Math.cos(rad); // Normal force = Fgy
+        let Ff = state.mu * Fgy;
+        
+        let Fnet = Fgx - Ff;
+        if(Fnet < 0) Fnet = 0; // Static friction prevents moving up
 
-        function u1_vecUpdate() {
-            let m = parseFloat(document.getElementById('u1-vec-mag').value);
-            let d = parseFloat(document.getElementById('u1-vec-deg').value);
-            document.getElementById('u1-mag').innerText = m;
-            document.getElementById('u1-vec-ang').innerText = d;
-            u1_draw();
-        }
+        let a = Fnet / state.m;
+        state.v += a * 0.02;
+        state.x += state.v * 0.02;
 
-        function u1_rfUpdate() {
-            u1_state.vx = parseFloat(document.getElementById('u1-vb').value);
-            u1_state.vy = parseFloat(document.getElementById('u1-vr').value);
-            document.getElementById('u1-vb-val').innerText = u1_state.vx;
-            document.getElementById('u1-vr-val').innerText = u1_state.vy;
-        }
+        document.getElementById('out-f').innerText = Fnet.toFixed(2);
+        
+        if(state.x > 8) state.running = false; // End of ramp
+        
+        draw_2_2();
+        animId = requestAnimationFrame(loop_2_2);
+    }
 
-        function u1_scrub() {
-            u1_state.running = false;
-            u1_state.t = parseFloat(document.getElementById('u1-scrubber').value);
-            document.getElementById('u1-time-val').innerText = u1_state.t.toFixed(2);
-            // Recalculate Px Py based on kinematic eq
-            const vi = parseFloat(document.getElementById('u1-vi').value);
-            const th = parseFloat(document.getElementById('u1-theta').value) * Math.PI/180;
-            const y0 = parseFloat(document.getElementById('u1-dy').value);
-            u1_state.px = (vi * Math.cos(th)) * u1_state.t;
-            u1_state.py = y0 + (vi * Math.sin(th) * u1_state.t) - (0.5 * 9.8 * u1_state.t*u1_state.t);
-            u1_draw();
-        }
+    function draw_2_2() {
+        // Lab Bench background
+        ctx.fillStyle = "#f0f3f5"; ctx.fillRect(0,0,700,450);
+        
+        let rad = state.angle * Math.PI/180;
+        let cx = 100, cy = 400;
+        
+        // Ramp
+        ctx.fillStyle = "#bdc3c7"; 
+        ctx.beginPath(); ctx.moveTo(cx, cy); 
+        ctx.lineTo(cx + 500*Math.cos(rad), cy - 500*Math.sin(rad)); 
+        ctx.lineTo(cx + 500*Math.cos(rad), cy); 
+        ctx.fill();
 
-        function u1_toggle() {
-            u1_state.running = !u1_state.running;
-            if(u1_state.running) {
-                lastTime = performance.now();
-                if(u1_tab === 4) {
-                    // Initialize projectile physics
-                    const vi = parseFloat(document.getElementById('u1-vi').value);
-                    const th = parseFloat(document.getElementById('u1-theta').value) * Math.PI/180;
-                    const y0 = parseFloat(document.getElementById('u1-dy').value);
-                    if(u1_state.t === 0) { // Only reset if at start
-                         u1_state.px = 0; u1_state.py = y0;
-                         u1_state.vx = vi * Math.cos(th); u1_state.vy = vi * Math.sin(th);
-                         u1_state.trail = [];
-                    }
-                }
-                u1_loop();
-            }
-        }
+        // Block Rotation Logic
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(-rad);
+        
+        let bx = state.x * 50 + 50; // px
+        ctx.fillStyle = "#e67e22"; ctx.fillRect(bx, -40, 40, 40);
+        
+        // FBD
+        let cenX = bx + 20; let cenY = -20;
+        // Normal (Up relative to slope)
+        drawVector(cenX, cenY, 0, -60, "blue"); 
+        // Friction (Left relative to slope)
+        if(state.mu > 0) drawVector(cenX, cenY, -40, 0, "red");
+        
+        ctx.restore();
+        
+        // Gravity (Always down in world space)
+        // Need to project block center to world space
+        let wx = cx + (bx+20)*Math.cos(rad) - (-20)*Math.sin(rad); // Simple approx
+        // Actually: rotated x is bx+20, y is -20.
+        let worldX = cx + (bx+20) * Math.cos(rad) - (-20) * Math.sin(rad); // Rotation matrix
+        let worldY = cy + (bx+20) * Math.sin(-rad) + (-20) * Math.cos(-rad); // Note the -rad for canvas y flip? No, standard rot.
+        // Simplified visual anchor:
+        let visX = cx + (state.x*50 + 70)*Math.cos(rad);
+        let visY = cy - (state.x*50 + 70)*Math.sin(rad);
+        drawVector(visX, visY, 0, 60, "green"); // Gravity straight down
+    }
 
-        function u1_reset() {
-            u1_state.running = false;
-            u1_state.t = 0;
-            u1_state.x = 0;
-            if(u1_tab === 4) {
-                document.getElementById('u1-scrubber').value = 0;
-                document.getElementById('u1-time-val').innerText = "0.0";
-                u1_state.trail = [];
-                u1_state.py = parseFloat(document.getElementById('u1-dy').value);
-                u1_state.px = 0;
-            }
-            u1_draw();
-        }
+    // ===============================================
+    // === UNIT 3: CIRCULAR MOTION (Space Theme) ===
+    // ===============================================
 
-        function u1_loop(timestamp) {
-            if(!u1_state.running) return;
-            const dt = 0.02; // Fixed step for stability
-            u1_state.t += dt;
+    function setup_3_2() {
+        document.getElementById('main-view').classList.add('theme-space');
+        document.getElementById('sim-title').innerText = "3.2 Universal Gravitation & Orbits";
+        document.getElementById('sim-desc').innerHTML = `
+            <h3>Orbit Simulation</h3>
+            <p>The gravitational force (<span class="var">F<sub>g</sub></span>) provides the centripetal force required to keep a satellite in orbit. 
+            If velocity (<span class="var">v</span>) is too high, the satellite escapes. If too low, it crashes.
+            <br><i>Equation:</i> <span class="var">F<sub>g</sub> = Gm<sub>1</sub>m<sub>2</sub> / r<sup>2</sup></span></p>`;
 
-            if(u1_tab === 0) { // 1D
-                u1_state.v += u1_state.a * dt;
-                u1_state.x += u1_state.v * dt;
-                document.getElementById('u1-readout-x').innerText = u1_state.x.toFixed(1);
-            } else if (u1_tab === 1) { // Graph
-                u1_state.x += u1_state.v * dt;
-                u1_state.trail.push({t: u1_state.t, x: u1_state.x});
-                if(u1_state.trail.length > 200) u1_state.trail.shift();
-            } else if (u1_tab === 3) { // RF
-                u1_state.x += u1_state.vx * dt; // Across
-                u1_state.y = (u1_state.y || 0) + u1_state.vy * dt; // Downstream
-            } else if (u1_tab === 4) { // Projectile
-                u1_state.px += u1_state.vx * dt;
-                u1_state.py += u1_state.vy * dt;
-                u1_state.vy -= 9.8 * dt;
-                u1_state.trail.push({x: u1_state.px, y: u1_state.py});
-                
-                // Update Scrubber UI
-                document.getElementById('u1-scrubber').value = u1_state.t;
-                document.getElementById('u1-time-val').innerText = u1_state.t.toFixed(2);
+        document.getElementById('sim-controls').innerHTML = `
+             <div class="control-group">
+                <label>Orbital Velocity (<span class="var">v</span>)</label>
+                <input type="range" id="in-ov" min="0" max="10" step="0.1" value="4.5" oninput="reset_3_2()">
+            </div>
+             <div class="control-group">
+                <label>Distance (<span class="var">r</span>)</label>
+                <input type="range" id="in-or" min="50" max="200" value="120" oninput="reset_3_2()">
+            </div>
+            <button class="btn btn-green" onclick="state.running=!state.running; loop_3_2()">Play / Pause</button>
+            <button class="btn btn-red" onclick="reset_3_2()">Reset</button>
+        `;
+        reset_3_2();
+    }
 
-                if(u1_state.py < 0) { u1_state.py = 0; u1_state.running = false; }
-            }
+    function reset_3_2() {
+        let r = parseFloat(document.getElementById('in-or').value);
+        let v = parseFloat(document.getElementById('in-ov').value);
+        state = { 
+            sunM: 1000, 
+            planetX: r, planetY: 0, 
+            vx: 0, vy: v, 
+            trail: [], running: false 
+        };
+        draw_3_2();
+    }
 
-            u1_draw();
-            animationId = requestAnimationFrame(u1_loop);
-        }
+    function loop_3_2() {
+        if(!state.running || currentSim !== '3.2') return;
 
-        function u1_draw() {
-            u1_ctx.clearRect(0,0,700,450);
-            const w = 700, h = 450;
-            
-            if(u1_tab === 0) { // 1D Car
-                u1_ctx.fillStyle = "#ecf0f1"; u1_ctx.fillRect(0, h/2 - 20, w, 40); // Road
-                let drawX = (u1_state.x * 10) + 50; // Scale
-                drawX = drawX % w; // Wrap
-                u1_ctx.fillStyle = "#e74c3c"; u1_ctx.fillRect(drawX, h/2 - 15, 30, 20); // Car
-                // Ruler
-                u1_ctx.fillStyle = "black";
-                for(let i=0; i<w; i+=50) { u1_ctx.fillRect(i, h/2+20, 1, 10); u1_ctx.fillText(i/10 + "m", i-5, h/2+45); }
-            } 
-            else if (u1_tab === 1) { // Graphs
-                // Draw Axes
-                u1_ctx.beginPath(); u1_ctx.moveTo(50, 50); u1_ctx.lineTo(50, 400); u1_ctx.lineTo(650, 400); u1_ctx.stroke();
-                u1_ctx.fillText("Position (x)", 10, 200); u1_ctx.fillText("Time (t)", 350, 420);
-                
-                // Plot
-                u1_ctx.beginPath(); u1_ctx.strokeStyle = "blue"; u1_ctx.lineWidth = 2;
-                u1_state.trail.forEach((p, i) => {
-                    let gx = 50 + p.t * 20;
-                    let gy = 400 - (p.x * 5); // Scale
-                    if(i===0) u1_ctx.moveTo(gx, gy); else u1_ctx.lineTo(gx, gy);
-                });
-                u1_ctx.stroke();
-            }
-            else if (u1_tab === 2) { // Vectors
-                let m = parseFloat(document.getElementById('u1-vec-mag').value);
-                let d = parseFloat(document.getElementById('u1-vec-deg').value);
-                let r = d * Math.PI / 180;
-                let cx = 350, cy = 225;
-                let vx = m * 15 * Math.cos(r);
-                let vy = m * 15 * Math.sin(r);
+        // Euler Integration for Orbits (Simple)
+        let r2 = state.planetX**2 + state.planetY**2;
+        let r = Math.sqrt(r2);
+        let F = 5000 / r2; // G*M simplified to 5000 for visual scaling
+        
+        let angle = Math.atan2(state.planetY, state.planetX);
+        let ax = -F * Math.cos(angle);
+        let ay = -F * Math.sin(angle);
 
-                // Draw Axes
-                u1_ctx.strokeStyle = "#ccc"; u1_ctx.beginPath(); u1_ctx.moveTo(cx, 0); u1_ctx.lineTo(cx, 450); u1_ctx.moveTo(0, cy); u1_ctx.lineTo(700, cy); u1_ctx.stroke();
-                
-                // Main Vector
-                u1_arrow(cx, cy, cx+vx, cy-vy, "black");
-                // Components
-                u1_ctx.setLineDash([5,5]);
-                u1_arrow(cx, cy, cx+vx, cy, "red"); // Vx
-                u1_arrow(cx+vx, cy, cx+vx, cy-vy, "blue"); // Vy
-                u1_ctx.setLineDash([]);
-                
-                u1_ctx.font = "16px sans-serif";
-                u1_ctx.fillStyle = "red"; u1_ctx.fillText(`vx: ${(m*Math.cos(r)).toFixed(1)}`, cx+vx/2, cy+20);
-                u1_ctx.fillStyle = "blue"; u1_ctx.fillText(`vy: ${(m*Math.sin(r)).toFixed(1)}`, cx+vx+10, cy-vy/2);
-            }
-            else if (u1_tab === 3) { // Ref Frames
-                // River
-                u1_ctx.fillStyle = "#85c1e9"; u1_ctx.fillRect(100, 0, 500, 450);
-                u1_ctx.fillStyle = "#2c3e50"; u1_ctx.fillRect(0,0,100,450); u1_ctx.fillRect(600,0,100,450); // Banks
-                
-                // Boat
-                let bx = 100 + (u1_state.x || 0) * 10;
-                let by = 225 + (u1_state.y || 0) * 10;
-                u1_ctx.fillStyle = "brown"; u1_ctx.beginPath(); u1_ctx.arc(bx, by, 10, 0, Math.PI*2); u1_ctx.fill();
-                
-                // Vectors
-                u1_arrow(bx, by, bx + u1_state.vx*5, by, "white"); // boat velocity
-                u1_arrow(bx, by, bx, by + u1_state.vy*5, "blue"); // river velocity
-            }
-            else if (u1_tab === 4) { // Projectile
-                u1_ctx.save();
-                
-                // Camera Transform
-                u1_ctx.translate(u1_state.camX, u1_state.camY);
-                u1_ctx.scale(u1_state.scale, u1_state.scale);
+        state.vx += ax;
+        state.vy += ay;
+        state.planetX += state.vx;
+        state.planetY += state.vy;
 
-                // Grid
-                const GRID_SIZE = 50;
-                const HEIGHT = 450; // Ground level visually
-                
-                // Draw Ground
-                u1_ctx.fillStyle = "#2ecc71";
-                u1_ctx.fillRect(-1000, HEIGHT, 5000, 100);
+        state.trail.push({x: state.planetX, y: state.planetY});
+        if(state.trail.length > 200) state.trail.shift();
 
-                // Draw Grid Lines (Dynamic based on viewport would be better, but fixed for simplicity)
-                u1_ctx.strokeStyle = "rgba(0,0,0,0.1)";
-                u1_ctx.lineWidth = 1;
-                u1_ctx.beginPath();
-                for(let i=-1000; i<3000; i+=GRID_SIZE) { u1_ctx.moveTo(i, -1000); u1_ctx.lineTo(i, 2000); }
-                for(let j=-1000; j<2000; j+=GRID_SIZE) { u1_ctx.moveTo(-1000, j); u1_ctx.lineTo(3000, j); }
-                u1_ctx.stroke();
+        // Crash check
+        if(r < 20) state.running = false; 
 
-                // Origin Marker
-                u1_ctx.fillStyle = "black"; u1_ctx.beginPath(); u1_ctx.arc(0, HEIGHT, 5, 0, Math.PI*2); u1_ctx.fill();
+        draw_3_2();
+        animId = requestAnimationFrame(loop_3_2);
+    }
 
-                // Physics to Canvas Mapping (y is up in physics, down in canvas)
-                const mapY = (physY) => HEIGHT - (physY * 10); // 10px per meter
-                const mapX = (physX) => (physX * 10);
+    function draw_3_2() {
+        ctx.fillStyle = "#000000"; ctx.fillRect(0,0,700,450);
+        
+        let cx = 350, cy = 225; // Center of canvas
+        
+        // Star
+        ctx.fillStyle = "#f1c40f"; 
+        ctx.beginPath(); ctx.arc(cx, cy, 20, 0, Math.PI*2); ctx.fill();
+        // Glow
+        ctx.strokeStyle = "rgba(241, 196, 15, 0.2)"; ctx.lineWidth=10; ctx.stroke(); ctx.lineWidth=1;
 
-                // Trajectory
-                u1_ctx.strokeStyle = "blue";
-                u1_ctx.lineWidth = 2;
-                u1_ctx.setLineDash([5,5]);
-                u1_ctx.beginPath();
-                if(u1_state.trail.length > 0) {
-                    u1_ctx.moveTo(mapX(u1_state.trail[0].x), mapY(u1_state.trail[0].y));
-                    u1_state.trail.forEach(p => u1_ctx.lineTo(mapX(p.x), mapY(p.y)));
-                }
-                u1_ctx.stroke();
-                u1_ctx.setLineDash([]);
+        // Trail
+        ctx.strokeStyle = "#3498db"; ctx.beginPath();
+        state.trail.forEach((p, i) => {
+            if(i==0) ctx.moveTo(cx + p.x, cy + p.y);
+            else ctx.lineTo(cx + p.x, cy + p.y);
+        });
+        ctx.stroke();
 
-                // Ball
-                let cx = mapX(u1_state.px);
-                let cy = mapY(u1_state.py);
-                
-                // Preview Ghost if not running
-                if(!u1_state.running && u1_state.t === 0) {
-                     let y0 = parseFloat(document.getElementById('u1-dy').value);
-                     cy = mapY(y0);
-                }
+        // Planet
+        let px = cx + state.planetX;
+        let py = cy + state.planetY;
+        ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(px, py, 5, 0, Math.PI*2); ctx.fill();
 
-                u1_ctx.fillStyle = "red";
-                u1_ctx.beginPath(); u1_ctx.arc(cx, cy, 8, 0, Math.PI*2); u1_ctx.fill();
-                
-                u1_ctx.restore();
-            }
-        }
+        // Force Vector (Gravity)
+        let angle = Math.atan2(state.planetY, state.planetX);
+        let Flen = 30; // Visual length
+        drawVector(px, py, -Flen*Math.cos(angle), -Flen*Math.sin(angle), "red");
+        
+        // Velocity Vector
+        drawVector(px, py, state.vx*5, state.vy*5, "green");
+    }
 
-        function u1_arrow(x1, y1, x2, y2, color) {
-            const headlen = 10;
-            const dx = x2 - x1;
-            const dy = y2 - y1;
-            const angle = Math.atan2(dy, dx);
-            u1_ctx.strokeStyle = color; u1_ctx.fillStyle = color; u1_ctx.lineWidth = 2;
-            u1_ctx.beginPath(); u1_ctx.moveTo(x1, y1); u1_ctx.lineTo(x2, y2); u1_ctx.stroke();
-            u1_ctx.beginPath(); u1_ctx.moveTo(x2, y2);
-            u1_ctx.lineTo(x2 - headlen * Math.cos(angle - Math.PI / 6), y2 - headlen * Math.sin(angle - Math.PI / 6));
-            u1_ctx.lineTo(x2 - headlen * Math.cos(angle + Math.PI / 6), y2 - headlen * Math.sin(angle + Math.PI / 6));
-            u1_ctx.fill();
-        }
+    // === UTILITY HELPERS ===
+    
+    // Updates the text numbers in the UI
+    function updateReadout() {
+        if(document.getElementById('out-t')) document.getElementById('out-t').innerText = state.t.toFixed(2);
+        if(document.getElementById('out-x')) document.getElementById('out-x').innerText = state.x.toFixed(2);
+        if(document.getElementById('val-v')) document.getElementById('val-v').innerText = state.v;
+        if(document.getElementById('val-x')) document.getElementById('val-x').innerText = state.x;
+    }
 
-        // =========================================
-        // === UNIT 2: DYNAMICS (Inclined Plane) ===
-        // =========================================
-        const u2_canvas = document.getElementById('u2-canvas');
-        const u2_ctx = u2_canvas.getContext('2d');
-        let u2_state = { m: 2, theta: 30, mu: 0.1, x: 0, v: 0, a: 0, t: 0, running: false };
+    // Boilerplate for empty/missing sims
+    function setup_1_2() { missing("1.2 Constant Acceleration (1D)"); }
+    function setup_2_1() { missing("2.1 Newton's Second Law"); }
+    function setup_2_3() { missing("2.3 Connected Systems (Atwood)"); }
+    function setup_3_1() { missing("3.1 Uniform Circular Motion"); }
 
-        function u2_init() {
-            u2_update(true);
-        }
+    function missing(title) {
+        document.getElementById('sim-title').innerText = title;
+        document.getElementById('sim-desc').innerHTML = "<p>This simulation is queued for generation in the next update.</p>";
+        document.getElementById('sim-controls').innerHTML = "<p style='color:#777; font-style:italic;'>Controls loading...</p>";
+        ctx.clearRect(0,0,700,450);
+        ctx.fillStyle = "#f4f6f7"; ctx.fillRect(0,0,700,450);
+        ctx.fillStyle = "#333"; ctx.font = "20px Arial"; ctx.fillText("Pending Construction...", 250, 225);
+    }
 
-        function u2_update(reset = false) {
-            u2_state.m = parseFloat(document.getElementById('u2-m').value);
-            u2_state.theta = parseFloat(document.getElementById('u2-theta').value);
-            u2_state.mu = parseFloat(document.getElementById('u2-mu').value);
-            
-            document.getElementById('u2-m-val').innerText = u2_state.m;
-            document.getElementById('u2-theta-val').innerText = u2_state.theta;
-            document.getElementById('u2-mu-val').innerText = u2_state.mu;
+    // Helper: Draw Arrow
+    function drawVector(x, y, dx, dy, color) {
+        let head = 10;
+        let angle = Math.atan2(dy, dx);
+        ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + dx, y + dy); ctx.stroke();
+        ctx.beginPath(); 
+        ctx.moveTo(x+dx, y+dy);
+        ctx.lineTo(x+dx - head*Math.cos(angle-Math.PI/6), y+dy - head*Math.sin(angle-Math.PI/6));
+        ctx.lineTo(x+dx - head*Math.cos(angle+Math.PI/6), y+dy - head*Math.sin(angle+Math.PI/6));
+        ctx.fill();
+        ctx.lineWidth = 1;
+    }
 
-            // Physics Calc
-            const rad = u2_state.theta * Math.PI / 180;
-            const g = 9.8;
-            const Fg_x = u2_state.m * g * Math.sin(rad); // Force down slope
-            const Fg_y = u2_state.m * g * Math.cos(rad); // Force into slope
-            const Fn = Fg_y; 
-            const Ff = u2_state.mu * Fn; // Max static/kinetic friction
-            
-            let netForce = Fg_x - Ff;
-            if(netForce < 0) netForce = 0; // Won't slide up
+    function drawCar(x, y, v) {
+        ctx.fillStyle = "#34495e";
+        ctx.fillRect(x-15, y-10, 30, 20); // Body
+        ctx.fillStyle = "black";
+        ctx.beginPath(); ctx.arc(x-10, y+10, 4, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(x+10, y+10, 4, 0, Math.PI*2); ctx.fill();
+        // Velocity Arrow
+        drawVector(x, y-15, v*3, 0, "red");
+    }
 
-            u2_state.a = netForce / u2_state.m;
+    function drawGrid(step) {
+        ctx.strokeStyle = "#e0e0e0";
+        ctx.beginPath();
+        for(let x=0; x<700; x+=step) { ctx.moveTo(x,0); ctx.lineTo(x,450); }
+        for(let y=0; y<450; y+=step) { ctx.moveTo(0,y); ctx.lineTo(700,y); }
+        ctx.stroke();
+    }
 
-            document.getElementById('u2-fnet').innerText = netForce.toFixed(2);
-            document.getElementById('u2-acc').innerText = u2_state.a.toFixed(2);
+    // Load Default
+    loadSim('1.1');
+</script>
 
-            if(reset) { u2_state.x = 0; u2_state.v = 0; u2_state.t = 0; u2_state.running = false; }
-            
-            u2_draw();
-        }
-
-        function u2_toggle() {
-            u2_state.running = !u2_state.running;
-            if(u2_state.running) u2_loop();
-        }
-        function u2_reset() { u2_update(true); }
-
-        function u2_loop() {
-            if(!u2_state.running) return;
-            const dt = 0.02;
-            u2_state.v += u2_state.a * dt;
-            u2_state.x += u2_state.v * dt;
-            
-            // End of ramp limit
-            if(u2_state.x > 8) { u2_state.running = false; } // 8 meters long ramp
-
-            u2_draw();
-            animationId = requestAnimationFrame(u2_loop);
-        }
-
-        function u2_draw() {
-            u2_ctx.clearRect(0,0,700,450);
-            
-            const cx = 100, cy = 350; // Bottom left of ramp
-            const rampLen = 500;
-            const angleRad = u2_state.theta * Math.PI / 180;
-            
-            // Draw Ramp Triangle
-            u2_ctx.fillStyle = "#bdc3c7";
-            u2_ctx.beginPath();
-            u2_ctx.moveTo(cx, cy);
-            u2_ctx.lineTo(cx + rampLen * Math.cos(angleRad), cy - rampLen * Math.sin(angleRad)); // Top
-            u2_ctx.lineTo(cx + rampLen * Math.cos(angleRad), cy); // Bottom Right
-            u2_ctx.fill();
-
-            // Coordinate Transform for Block
-            u2_ctx.save();
-            u2_ctx.translate(cx, cy);
-            u2_ctx.rotate(-angleRad); // Rotate world to match ramp
-
-            // Block Position
-            const pixelsPerMeter = 50;
-            let bx = u2_state.x * pixelsPerMeter + 50; // Start offset
-            
-            // Draw Block
-            u2_ctx.fillStyle = "#e67e22";
-            u2_ctx.fillRect(bx, -40, 40, 40); // Drawn "above" the rotated axis
-
-            // FBD Vectors (Drawn relative to block center)
-            const cenX = bx + 20;
-            const cenY = -20;
-            
-            // Normal Force (Up)
-            u2_ctx.strokeStyle = "blue"; u2_ctx.lineWidth = 2;
-            u2_ctx.beginPath(); u2_ctx.moveTo(cenX, cenY); u2_ctx.lineTo(cenX, cenY - 40); u2_ctx.stroke();
-            
-            // Friction (Left/Back)
-            if(u2_state.mu > 0) {
-                u2_ctx.strokeStyle = "red";
-                u2_ctx.beginPath(); u2_ctx.moveTo(cenX, cenY); u2_ctx.lineTo(cenX - 30, cenY); u2_ctx.stroke();
-            }
-
-            // Restore for Gravity (since gravity is always straight down, not rotated)
-            u2_ctx.restore();
-
-            // Draw Gravity Vector (requires world coordinates of block center)
-            const worldBx = cx + bx * Math.cos(angleRad) - (-20) * Math.sin(angleRad);
-            const worldBy = cy - bx * Math.sin(angleRad) + (-20) * Math.cos(angleRad);
-            
-            u2_ctx.strokeStyle = "green"; u2_ctx.lineWidth = 2;
-            u2_ctx.beginPath(); u2_ctx.moveTo(worldBx, worldBy); u2_ctx.lineTo(worldBx, worldBy + 50); u2_ctx.stroke();
-        }
-
-
-        // =========================================
-        // === UNIT 6: SHM (Updated Styling) ===
-        // =========================================
-        const u6_sCanvas = document.getElementById('u6-canvas');
-        const u6_gCanvas = document.getElementById('u6-graph');
-        const u6_sCtx = u6_sCanvas.getContext('2d');
-        const u6_gCtx = u6_gCanvas.getContext('2d');
-        let u6_state = { m: 1, k: 20, A: 0.5, t: 0, running: false, data: [] };
-
-        function u6_init() { u6_update(true); }
-
-        function u6_update(reset = false) {
-            u6_state.m = parseFloat(document.getElementById('u6-m').value);
-            u6_state.k = parseFloat(document.getElementById('u6-k').value);
-            u6_state.A = parseFloat(document.getElementById('u6-amp').value);
-
-            document.getElementById('u6-m-val').innerText = u6_state.m;
-            document.getElementById('u6-k-val').innerText = u6_state.k;
-            document.getElementById('u6-amp-val').innerText = u6_state.A;
-
-            let T = 2 * Math.PI * Math.sqrt(u6_state.m / u6_state.k);
-            document.getElementById('u6-period').innerText = T.toFixed(2);
-            document.getElementById('u6-freq').innerText = (1/T).toFixed(2);
-            
-            if(reset) { u6_state.t = 0; u6_state.data = []; u6_draw(); }
-        }
-
-        function u6_toggle() {
-            u6_state.running = !u6_state.running;
-            if(u6_state.running) u6_loop();
-        }
-
-        function u6_loop() {
-            if(!u6_state.running) return;
-            let w = Math.sqrt(u6_state.k / u6_state.m);
-            u6_state.t += 0.04;
-            let x = u6_state.A * Math.cos(w * u6_state.t);
-            
-            u6_state.data.push(x);
-            if(u6_state.data.length > 200) u6_state.data.shift();
-
-            u6_draw(x);
-            animationId = requestAnimationFrame(u6_loop);
-        }
-
-        function u6_draw(x = u6_state.A) {
-            // Draw Sim
-            u6_sCtx.clearRect(0,0,600,300);
-            const center = 300;
-            const pxScale = 100;
-            let blockX = center + (x * pxScale);
-            
-            // Wall & Floor
-            u6_sCtx.fillStyle = '#95a5a6'; u6_sCtx.fillRect(0, 50, 20, 200); 
-            u6_sCtx.beginPath(); u6_sCtx.moveTo(0,250); u6_sCtx.lineTo(600,250); u6_sCtx.stroke();
-
-            // Spring
-            u6_sCtx.beginPath(); u6_sCtx.strokeStyle = '#555'; u6_sCtx.moveTo(20, 210);
-            for(let i=0; i<=20; i++) {
-                let sx = 20 + (i/20) * (blockX - 20);
-                u6_sCtx.lineTo(sx, 210 + (i%2==0 ? -10 : 10));
-            }
-            u6_sCtx.lineTo(blockX, 210); u6_sCtx.stroke();
-
-            // Block
-            u6_sCtx.fillStyle = '#3498db'; u6_sCtx.fillRect(blockX, 190, 40, 40);
-
-            // Equilibrium
-            u6_sCtx.strokeStyle = 'green'; u6_sCtx.setLineDash([5,5]);
-            u6_sCtx.beginPath(); u6_sCtx.moveTo(center+20, 50); u6_sCtx.lineTo(center+20, 250); u6_sCtx.stroke();
-            u6_sCtx.setLineDash([]);
-
-            // Draw Graph
-            u6_gCtx.clearRect(0,0,600,150);
-            u6_gCtx.strokeStyle = '#bdc3c7'; u6_gCtx.beginPath(); u6_gCtx.moveTo(0,75); u6_gCtx.lineTo(600,75); u6_gCtx.stroke();
-
-            u6_gCtx.strokeStyle = '#e74c3c'; u6_gCtx.lineWidth = 2;
-            u6_gCtx.beginPath();
-            u6_state.data.forEach((val, i) => {
-                let px = 600 - (u6_state.data.length - i) * 3;
-                let py = 75 - (val * 40);
-                if(i===0) u6_gCtx.moveTo(px, py); else u6_gCtx.lineTo(px, py);
-            });
-            u6_gCtx.stroke();
-        }
-
-    </script>
 </body>
 </html>
