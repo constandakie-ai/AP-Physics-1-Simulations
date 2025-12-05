@@ -515,11 +515,349 @@
         if(document.getElementById('val-x')) document.getElementById('val-x').innerText = state.x;
     }
 
-    // Boilerplate for empty/missing sims
-    function setup_1_2() { missing("1.2 Constant Acceleration (1D)"); }
-    function setup_2_1() { missing("2.1 Newton's Second Law"); }
-    function setup_2_3() { missing("2.3 Connected Systems (Atwood)"); }
-    function setup_3_1() { missing("3.1 Uniform Circular Motion"); }
+// ===============================================
+    // === UNIT 1.2: ACCELERATION (Graph Focus) ===
+    // ===============================================
+    function setup_1_2() {
+        document.getElementById('sim-title').innerText = "1.2 Accelerated Motion";
+        document.getElementById('sim-desc').innerHTML = `
+            <h3>Changing Velocity</h3>
+            <p>When velocity changes, we have acceleration (<span class="var">a</span>). 
+            Positive acceleration speeds up an object moving in the positive direction, while negative acceleration (deceleration) slows it down.
+            Observe how the spacing between the "bread crumb" trail dots increases as speed increases.</p>`;
+
+        document.getElementById('sim-controls').innerHTML = `
+            <div class="control-group">
+                <label>Initial Vel (<i class="var">v<sub>0</sub></i>): <span id="val-v0">0</span> m/s</label>
+                <input type="range" id="in-v0" min="0" max="10" value="0" step="0.5" oninput="reset_1_2()">
+            </div>
+            <div class="control-group">
+                <label>Accel (<i class="var">a</i>): <span id="val-a">1.0</span> m/s²</label>
+                <input type="range" id="in-a" min="-2" max="2" value="1.0" step="0.1" oninput="reset_1_2()">
+            </div>
+            <button class="btn btn-green" onclick="state.running=!state.running; loop_1_2()">Start / Stop</button>
+            <button class="btn btn-red" onclick="reset_1_2()">Reset</button>
+            <div class="readout">Vel (<i class="var">v</i>): <span id="out-v">0.0</span> m/s <br> Pos (<i class="var">x</i>): <span id="out-x">0.0</span> m</div>
+        `;
+        reset_1_2();
+    }
+
+    function reset_1_2() {
+        state = { 
+            v0: parseFloat(document.getElementById('in-v0').value), 
+            a: parseFloat(document.getElementById('in-a').value),
+            x: 0, v: 0, t: 0, running: false, trail: [] 
+        };
+        state.v = state.v0;
+        document.getElementById('val-v0').innerText = state.v0;
+        document.getElementById('val-a').innerText = state.a;
+        updateReadout_1_2();
+        draw_1_2();
+    }
+
+    function loop_1_2() {
+        if(!state.running || currentSim !== '1.2') return;
+        let dt = 0.05;
+        state.t += dt;
+        
+        // Kinematics: v = v0 + at
+        state.v = state.v0 + (state.a * state.t);
+        // x = x0 + v0t + 0.5at^2
+        state.x = (state.v0 * state.t) + (0.5 * state.a * state.t * state.t);
+
+        // Trail logic (drop a dot every 0.5 seconds)
+        if (Math.floor(state.t / 0.5) > state.trail.length) {
+            state.trail.push(state.x);
+        }
+
+        updateReadout_1_2();
+        draw_1_2();
+        
+        // Stop if off screen
+        if(state.x > 65 || state.x < -5) state.running = false;
+        else animId = requestAnimationFrame(loop_1_2);
+    }
+
+    function updateReadout_1_2() {
+        document.getElementById('out-v').innerText = state.v.toFixed(2);
+        document.getElementById('out-x').innerText = state.x.toFixed(2);
+    }
+
+    function draw_1_2() {
+        ctx.clearRect(0,0,700,450);
+        drawGrid(50);
+        
+        // Ground line
+        ctx.beginPath(); ctx.moveTo(0, 250); ctx.lineTo(700, 250); ctx.stroke();
+        
+        // Motion Map (Breadcrumbs)
+        ctx.fillStyle = "rgba(46, 204, 113, 0.5)";
+        state.trail.forEach(pos => {
+            let px = 50 + pos * 10;
+            ctx.beginPath(); ctx.arc(px, 250, 4, 0, Math.PI*2); ctx.fill();
+        });
+
+        // Car
+        let cx = 50 + state.x * 10; // Scale 10px = 1m
+        drawCar(cx, 250, state.v);
+        
+        // Acceleration Vector (Orange) above car
+        if (Math.abs(state.a) > 0.1) {
+            drawVector(cx, 200, state.a * 20, 0, "#e67e22");
+            ctx.fillStyle = "#e67e22"; ctx.fillText("a", cx-5, 190);
+        }
+    }
+
+    // ===============================================
+    // === UNIT 2.1: NEWTON'S 2ND LAW (Lab Bench) ===
+    // ===============================================
+    function setup_2_1() {
+        document.getElementById('main-view').classList.add('theme-lab');
+        document.getElementById('sim-title').innerText = "2.1 Newton's Second Law";
+        document.getElementById('sim-desc').innerHTML = `
+            <h3>F = ma</h3>
+            <p>Acceleration is directly proportional to Net Force (<span class="var">F<sub>net</sub></span>) and inversely proportional to Mass (<span class="var">m</span>).
+            <br>In this frictionless environment, apply a force to see the resulting acceleration.</p>`;
+
+        document.getElementById('sim-controls').innerHTML = `
+            <div class="control-group">
+                <label>Force (<i class="var">F</i>): <span id="val-f">10</span> N</label>
+                <input type="range" id="in-f" min="-50" max="50" value="10" oninput="reset_2_1()">
+            </div>
+            <div class="control-group">
+                <label>Mass (<i class="var">m</i>): <span id="val-m">5</span> kg</label>
+                <input type="range" id="in-m" min="1" max="20" value="5" oninput="reset_2_1()">
+            </div>
+            <button class="btn btn-green" onclick="state.running=!state.running; loop_2_1()">Push</button>
+            <button class="btn btn-red" onclick="reset_2_1()">Reset</button>
+            <div class="readout">Accel (<i class="var">a</i>): <span id="out-a">2.00</span> m/s²</div>
+        `;
+        reset_2_1();
+    }
+
+    function reset_2_1() {
+        state = { 
+            F: parseFloat(document.getElementById('in-f').value), 
+            m: parseFloat(document.getElementById('in-m').value),
+            x: 0, v: 0, running: false 
+        };
+        state.a = state.F / state.m;
+        
+        document.getElementById('val-f').innerText = state.F;
+        document.getElementById('val-m').innerText = state.m;
+        document.getElementById('out-a').innerText = state.a.toFixed(2);
+        draw_2_1();
+    }
+
+    function loop_2_1() {
+        if(!state.running || currentSim !== '2.1') return;
+        state.v += state.a * 0.05;
+        state.x += state.v * 0.05;
+        
+        // Wall bounce
+        if (state.x > 250 || state.x < -250) {
+            state.v = -state.v * 0.5; // lose energy
+            state.x = state.x > 0 ? 250 : -250;
+            state.running = false;
+        }
+
+        draw_2_1();
+        animId = requestAnimationFrame(loop_2_1);
+    }
+
+    function draw_2_1() {
+        ctx.clearRect(0,0,700,450);
+        ctx.fillStyle = "#f0f3f5"; ctx.fillRect(0,0,700,450); // Lab bg
+
+        // Ice surface
+        ctx.fillStyle = "#d1e8ff"; ctx.fillRect(50, 280, 600, 20);
+        
+        let cx = 350 + state.x;
+        let cy = 280 - (state.m * 2); // Box size based on mass
+        let size = state.m * 4; 
+        if(size < 30) size = 30; // Min size
+
+        // Block
+        ctx.fillStyle = "#e74c3c"; ctx.fillRect(cx - size/2, 280 - size, size, size);
+        ctx.strokeStyle = "#c0392b"; ctx.strokeRect(cx - size/2, 280 - size, size, size);
+        
+        // Text on block
+        ctx.fillStyle = "white"; ctx.textAlign = "center"; 
+        ctx.font = "bold 14px sans-serif"; ctx.fillText(state.m + "kg", cx, 280 - size/2 + 5);
+
+        // Force Vector
+        if (Math.abs(state.F) > 0) {
+            drawVector(cx, 280 - size/2, state.F * 3, 0, "black");
+            ctx.fillStyle = "black"; ctx.fillText("F", cx + state.F*3, 280 - size/2 - 10);
+        }
+    }
+
+    // ===============================================
+    // === UNIT 2.3: CONNECTED SYSTEMS (Atwood) ===
+    // ===============================================
+    function setup_2_3() {
+        document.getElementById('main-view').classList.add('theme-lab');
+        document.getElementById('sim-title').innerText = "2.3 Connected Systems (Atwood Machine)";
+        document.getElementById('sim-desc').innerHTML = `
+            <h3>System Acceleration</h3>
+            <p>Two masses connected by a string over a pulley. The system accelerates based on the difference in mass.
+            <br>Equation: <span class="var">a = g(m<sub>2</sub> - m<sub>1</sub>) / (m<sub>1</sub> + m<sub>2</sub>)</span></p>`;
+
+        document.getElementById('sim-controls').innerHTML = `
+            <div class="control-group">
+                <label>Mass 1 (Left): <span id="val-m1">2</span> kg</label>
+                <input type="range" id="in-m1" min="1" max="10" value="2" oninput="reset_2_3()">
+            </div>
+            <div class="control-group">
+                <label>Mass 2 (Right): <span id="val-m2">4</span> kg</label>
+                <input type="range" id="in-m2" min="1" max="10" value="4" oninput="reset_2_3()">
+            </div>
+            <button class="btn btn-green" onclick="state.running=!state.running; loop_2_3()">Release</button>
+            <button class="btn btn-red" onclick="reset_2_3()">Reset</button>
+            <div class="readout">Accel (<i class="var">a</i>): <span id="out-a">0.00</span> m/s²</div>
+        `;
+        reset_2_3();
+    }
+
+    function reset_2_3() {
+        state = { 
+            m1: parseFloat(document.getElementById('in-m1').value), 
+            m2: parseFloat(document.getElementById('in-m2').value),
+            pos: 0, v: 0, running: false 
+        };
+        // Calc acceleration
+        let g = 9.8;
+        state.a = g * (state.m2 - state.m1) / (state.m1 + state.m2);
+        
+        document.getElementById('val-m1').innerText = state.m1;
+        document.getElementById('val-m2').innerText = state.m2;
+        document.getElementById('out-a').innerText = Math.abs(state.a).toFixed(2);
+        draw_2_3();
+    }
+
+    function loop_2_3() {
+        if(!state.running || currentSim !== '2.3') return;
+        state.v += state.a * 0.05;
+        state.pos += state.v * 0.05;
+        
+        // Floor Limits
+        if(state.pos > 150 || state.pos < -150) state.running = false;
+        
+        draw_2_3();
+        animId = requestAnimationFrame(loop_2_3);
+    }
+
+    function draw_2_3() {
+        ctx.clearRect(0,0,700,450);
+        ctx.fillStyle = "#f0f3f5"; ctx.fillRect(0,0,700,450);
+
+        // Pulley
+        let cx = 350, cy = 50;
+        ctx.beginPath(); ctx.arc(cx, cy, 30, 0, Math.PI*2); 
+        ctx.fillStyle = "#333"; ctx.fill();
+        
+        // String
+        ctx.strokeStyle = "black"; ctx.lineWidth = 2;
+        ctx.beginPath();
+        // Left String
+        ctx.moveTo(cx - 30, cy); ctx.lineTo(cx - 30, cy + 150 - state.pos);
+        // Right String
+        ctx.moveTo(cx + 30, cy); ctx.lineTo(cx + 30, cy + 150 + state.pos);
+        ctx.stroke();
+
+        // Masses
+        let y1 = cy + 150 - state.pos;
+        let y2 = cy + 150 + state.pos;
+        let s1 = 20 + state.m1 * 3;
+        let s2 = 20 + state.m2 * 3;
+
+        // Draw M1
+        ctx.fillStyle = "#3498db"; ctx.fillRect(cx - 30 - s1/2, y1, s1, s1);
+        ctx.fillStyle = "white"; ctx.textAlign = "center"; ctx.fillText("m1", cx - 30, y1+s1/2+5);
+
+        // Draw M2
+        ctx.fillStyle = "#e74c3c"; ctx.fillRect(cx + 30 - s2/2, y2, s2, s2);
+        ctx.fillStyle = "white"; ctx.fillText("m2", cx + 30, y2+s2/2+5);
+    }
+
+
+    // ===============================================
+    // === UNIT 3.1: CIRCULAR MOTION (Vector View) ===
+    // ===============================================
+    function setup_3_1() {
+        document.getElementById('main-view').classList.add('theme-space');
+        document.getElementById('sim-title').innerText = "3.1 Uniform Circular Motion";
+        document.getElementById('sim-desc').innerHTML = `
+            <h3>Velocity vs Acceleration</h3>
+            <p>In Uniform Circular Motion (UCM), speed is constant, but velocity changes direction. 
+            This requires a centripetal acceleration (<span class="var">a<sub>c</sub></span>) pointing toward the center.
+            <br>Vectors: <span style="color:#2ecc71">Green = Velocity</span>, <span style="color:#f1c40f">Yellow = Acceleration</span>.</p>`;
+
+        document.getElementById('sim-controls').innerHTML = `
+            <div class="control-group">
+                <label>Radius (<i class="var">r</i>): <span id="val-r">100</span> m</label>
+                <input type="range" id="in-r" min="50" max="150" value="100" oninput="reset_3_1()">
+            </div>
+            <div class="control-group">
+                <label>Velocity (<i class="var">v</i>): <span id="val-v">5</span> m/s</label>
+                <input type="range" id="in-v" min="1" max="10" value="5" oninput="reset_3_1()">
+            </div>
+            <button class="btn btn-green" onclick="state.running=!state.running; loop_3_1()">Play / Pause</button>
+            <div class="readout">Centripetal Accel (<i class="var">a<sub>c</sub></i>): <span id="out-ac">0.0</span> m/s²</div>
+        `;
+        reset_3_1();
+    }
+
+    function reset_3_1() {
+        state = { 
+            r: parseFloat(document.getElementById('in-r').value), 
+            v: parseFloat(document.getElementById('in-v').value),
+            angle: 0, running: false 
+        };
+        // ac = v^2 / r
+        let ac = (state.v * state.v) / (state.r / 10); // scale factor fix
+        document.getElementById('val-r').innerText = state.r;
+        document.getElementById('val-v').innerText = state.v;
+        document.getElementById('out-ac').innerText = (state.v**2 / (state.r/10)).toFixed(2);
+        draw_3_1();
+    }
+
+    function loop_3_1() {
+        if(!state.running || currentSim !== '3.1') return;
+        
+        // Angular velocity w = v / r
+        let w = state.v / state.r; 
+        state.angle += w * 5; // speed multiplier for visuals
+
+        draw_3_1();
+        animId = requestAnimationFrame(loop_3_1);
+    }
+
+    function draw_3_1() {
+        ctx.fillStyle = "#000"; ctx.fillRect(0,0,700,450);
+        let cx = 350, cy = 225;
+
+        // Path
+        ctx.strokeStyle = "#333"; ctx.lineWidth = 2; ctx.beginPath();
+        ctx.arc(cx, cy, state.r, 0, Math.PI*2); ctx.stroke();
+
+        // Object
+        let ox = cx + state.r * Math.cos(state.angle);
+        let oy = cy + state.r * Math.sin(state.angle);
+
+        ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(ox, oy, 8, 0, Math.PI*2); ctx.fill();
+
+        // Vectors
+        // Velocity (Tangent)
+        let vx = -Math.sin(state.angle) * state.v * 8;
+        let vy = Math.cos(state.angle) * state.v * 8;
+        drawVector(ox, oy, vx, vy, "#2ecc71"); // Green
+
+        // Acceleration (Radial Inward)
+        let ax = -Math.cos(state.angle) * 60;
+        let ay = -Math.sin(state.angle) * 60;
+        drawVector(ox, oy, ax, ay, "#f1c40f"); // Yellow
+    }
 
     function missing(title) {
         document.getElementById('sim-title').innerText = title;
