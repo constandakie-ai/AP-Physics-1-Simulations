@@ -917,6 +917,467 @@
 
     // Load Default
     loadSim('1.1');
+// ===============================================
+    // === UPDATE: SWITCH LOGIC FOR NEW UNITS ===
+    // ===============================================
+    // NOTE: We hook into the existing loadSim function by overriding the switch momentarily 
+    // or you can manually update the switch in your code. 
+    // Ideally, update your existing 'switch(id)' block to include these cases:
+    /*
+        case '4.1': setup_4_1(); break;
+        case '5.1': setup_5_1(); break;
+        case '6.1': setup_6_1(); break;
+        case '7.1': setup_7_1(); break;
+    */
+    // Since I cannot edit your file directly, I will overwrite the loadSim function 
+    // to include the old AND new units.
+    
+    // REPLACING THE PREVIOUS loadSim FUNCTION:
+    function loadSim(id) {
+        stopSim();
+        currentSim = id;
+        document.getElementById('sim-interface').classList.remove('hidden');
+        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+        if(event && event.target) event.target.classList.add('active'); 
+        document.getElementById('main-view').className = ''; 
+
+        switch(id) {
+            case '1.1': setup_1_1(); break;
+            case '1.2': setup_1_2(); break;
+            case '1.3': setup_1_3(); break;
+            case '2.1': setup_2_1(); break;
+            case '2.2': setup_2_2(); break;
+            case '2.3': setup_2_3(); break;
+            case '3.1': setup_3_1(); break;
+            case '3.2': setup_3_2(); break;
+            // NEW UNITS
+            case '4.1': setup_4_1(); break;
+            case '5.1': setup_5_1(); break;
+            case '6.1': setup_6_1(); break;
+            case '7.1': setup_7_1(); break;
+        }
+    }
+
+    // ===============================================
+    // === UNIT 4: ENERGY (Skate Park) ===
+    // ===============================================
+    function setup_4_1() {
+        document.getElementById('sim-title').innerText = "4.1 Conservation of Energy";
+        document.getElementById('sim-desc').innerHTML = `
+            <h3>Energy Transformation</h3>
+            <p>As the skater moves down the ramp, Potential Energy (<span class="var">U<sub>g</sub></span>) converts to Kinetic Energy (<span class="var">K</span>).
+            In the absence of friction, the Total Mechanical Energy (<span class="var">E<sub>total</sub></span>) remains constant.</p>`;
+
+        document.getElementById('sim-controls').innerHTML = `
+            <div class="control-group">
+                <label>Mass (<i class="var">m</i>): <span id="val-m">50</span> kg</label>
+                <input type="range" id="in-m" min="10" max="100" value="50" oninput="reset_4_1()">
+            </div>
+            <div class="control-group">
+                <label>Start Height (<i class="var">h</i>): <span id="val-h">5</span> m</label>
+                <input type="range" id="in-h" min="1" max="8" value="5" oninput="reset_4_1()">
+            </div>
+            <button class="btn btn-green" onclick="state.running=!state.running; loop_4_1()">Play / Pause</button>
+            <button class="btn btn-red" onclick="reset_4_1()">Reset</button>
+        `;
+        reset_4_1();
+    }
+
+    function reset_4_1() {
+        state = { 
+            m: parseFloat(document.getElementById('in-m').value), 
+            hStart: parseFloat(document.getElementById('in-h').value),
+            x: 0, running: false 
+        };
+        // Map x (0 to 700) to a track shape
+        // Track: Parabola y = 0.003(x-350)^2
+        document.getElementById('val-m').innerText = state.m;
+        document.getElementById('val-h').innerText = state.hStart;
+        
+        // Start at left rim corresponding to height
+        state.x = 350 - Math.sqrt(state.hStart / 0.003 * 10); // Inverse parabola
+        draw_4_1();
+    }
+
+    function loop_4_1() {
+        if(!state.running || currentSim !== '4.1') return;
+        
+        // Physics: Conservation of Energy
+        // Total E = mgh_start
+        // At any point: K = Total E - U
+        // v = sqrt(2K/m)
+        
+        let g = 9.8;
+        let scale = 40; // 40px = 1m
+        let yBase = 400;
+        
+        // Track Geometry
+        let dx = state.x - 350;
+        let h = 0.003 * dx * dx / 10; // Height in meters
+        let yPixels = yBase - h * scale;
+
+        let Etot = state.m * g * state.hStart;
+        let U = state.m * g * h;
+        let K = Etot - U;
+        
+        if(K < 0) K = 0; // Floating point error catch
+        let v = Math.sqrt(2 * K / state.m);
+
+        // Direction logic
+        if (!state.dir) state.dir = 1;
+        
+        // Move
+        let slope = 0.006 * (state.x - 350); // dy/dx
+        let angle = Math.atan(slope);
+        let vx = v * Math.cos(angle);
+        
+        // Bounds check
+        if (h > state.hStart && state.x > 350 && state.dir === 1) state.dir = -1;
+        if (h > state.hStart && state.x < 350 && state.dir === -1) state.dir = 1;
+
+        state.x += vx * state.dir * 0.2; // Time step factor
+        
+        state.K = K; state.U = U; state.Etot = Etot; // Store for draw
+        draw_4_1();
+        animId = requestAnimationFrame(loop_4_1);
+    }
+
+    function draw_4_1() {
+        ctx.clearRect(0,0,700,450);
+        
+        // Draw Track
+        ctx.beginPath();
+        ctx.strokeStyle = "#555"; ctx.lineWidth = 5;
+        for(let i=0; i<=700; i+=10) {
+            let h = 0.003 * (i-350)**2 / 10;
+            let y = 400 - h * 40;
+            if(i===0) ctx.moveTo(i,y); else ctx.lineTo(i,y);
+        }
+        ctx.stroke();
+
+        // Skater
+        let h = 0.003 * (state.x-350)**2 / 10;
+        let y = 400 - h * 40;
+        ctx.fillStyle = "#e67e22"; 
+        ctx.beginPath(); ctx.arc(state.x, y-10, 10, 0, Math.PI*2); ctx.fill();
+
+        // --- BAR CHART ---
+        // Setup
+        let bx = 550, by = 150;
+        let maxH = 100;
+        let total = (state.Etot) ? state.Etot : state.m * 9.8 * state.hStart; // Fallback if not running
+        
+        // K (Green)
+        let kH = (state.K / total) * maxH || 0;
+        ctx.fillStyle = "#2ecc71"; ctx.fillRect(bx, by - kH, 30, kH);
+        ctx.fillStyle = "#333"; ctx.fillText("K", bx+10, by+15);
+
+        // U (Blue)
+        let uH = (state.U / total) * maxH || (state.hStart > 0 ? maxH : 0); // Default full if reset
+        ctx.fillStyle = "#3498db"; ctx.fillRect(bx+40, by - uH, 30, uH);
+        ctx.fillText("U", bx+50, by+15);
+        
+        // Total (Yellow)
+        ctx.fillStyle = "#f1c40f"; ctx.fillRect(bx+80, by - maxH, 30, maxH);
+        ctx.fillText("Etot", bx+80, by+15);
+    }
+
+    // ===============================================
+    // === UNIT 5: MOMENTUM (Collisions) ===
+    // ===============================================
+    function setup_5_1() {
+        document.getElementById('sim-title').innerText = "5.1 Momentum & Collisions";
+        document.getElementById('sim-desc').innerHTML = `
+            <h3>Conservation of Momentum</h3>
+            <p>Momentum (<span class="var">p = mv</span>) is always conserved in collisions.
+            <br><b>Elastic:</b> Objects bounce, Kinetic Energy conserved.
+            <br><b>Inelastic:</b> Objects stick, Kinetic Energy lost to heat.</p>`;
+
+        document.getElementById('sim-controls').innerHTML = `
+            <div class="control-group">
+                <label>Mass 1 (Red): <span id="v-m1">2</span> kg</label>
+                <input type="range" id="in-m1" min="1" max="5" value="2" oninput="reset_5_1()">
+            </div>
+            <div class="control-group">
+                <label>Mass 2 (Blue): <span id="v-m2">2</span> kg</label>
+                <input type="range" id="in-m2" min="1" max="5" value="2" oninput="reset_5_1()">
+            </div>
+            <div class="control-group">
+                <label>Elasticity: <span id="v-e">Elastic (1.0)</span></label>
+                <input type="range" id="in-e" min="0" max="1" step="1" value="1" oninput="reset_5_1()">
+            </div>
+            <button class="btn btn-green" onclick="state.running=!state.running; loop_5_1()">Collide</button>
+            <button class="btn btn-red" onclick="reset_5_1()">Reset</button>
+        `;
+        reset_5_1();
+    }
+
+    function reset_5_1() {
+        state = {
+            m1: parseFloat(document.getElementById('in-m1').value),
+            m2: parseFloat(document.getElementById('in-m2').value),
+            e: parseFloat(document.getElementById('in-e').value), // 1 = elastic, 0 = inelastic
+            x1: 100, v1: 5,
+            x2: 500, v2: -2,
+            running: false
+        };
+        
+        document.getElementById('v-m1').innerText = state.m1;
+        document.getElementById('v-m2').innerText = state.m2;
+        document.getElementById('v-e').innerText = state.e === 1 ? "Elastic (Bouncy)" : "Inelastic (Sticky)";
+        
+        draw_5_1();
+    }
+
+    function loop_5_1() {
+        if(!state.running || currentSim !== '5.1') return;
+
+        state.x1 += state.v1;
+        state.x2 += state.v2;
+
+        // Collision Detect
+        let s1 = state.m1 * 15; // Size proportional to mass
+        let s2 = state.m2 * 15;
+        
+        if (state.x1 + s1 >= state.x2) {
+            // Physics 1D Collision Eq
+            let v1i = state.v1;
+            let v2i = state.v2;
+            let m1 = state.m1;
+            let m2 = state.m2;
+
+            if (state.e === 0) {
+                // Perfectly Inelastic (Stick)
+                let vf = (m1*v1i + m2*v2i) / (m1 + m2);
+                state.v1 = vf; 
+                state.v2 = vf;
+            } else {
+                // Elastic
+                state.v1 = ((m1-m2)*v1i + 2*m2*v2i) / (m1+m2);
+                state.v2 = ((m2-m1)*v2i + 2*m1*v1i) / (m1+m2);
+            }
+            
+            // Separate slightly to prevent sticky-bug
+            state.x1 = state.x2 - s1 - 1; 
+        }
+
+        draw_5_1();
+        animId = requestAnimationFrame(loop_5_1);
+    }
+
+    function draw_5_1() {
+        ctx.clearRect(0,0,700,450);
+        // Track
+        ctx.fillStyle = "#ddd"; ctx.fillRect(0, 200, 700, 10);
+        
+        let s1 = state.m1 * 15;
+        let s2 = state.m2 * 15;
+
+        // Cart 1
+        ctx.fillStyle = "#e74c3c"; ctx.fillRect(state.x1, 200 - s1, s1, s1);
+        ctx.fillStyle = "white"; ctx.fillText(state.v1.toFixed(1) + " m/s", state.x1, 190 - s1);
+
+        // Cart 2
+        ctx.fillStyle = "#3498db"; ctx.fillRect(state.x2, 200 - s2, s2, s2);
+        ctx.fillStyle = "black"; ctx.fillText(state.v2.toFixed(1) + " m/s", state.x2, 190 - s2);
+    }
+
+    // ===============================================
+    // === UNIT 6: SHM (Springs) ===
+    // ===============================================
+    function setup_6_1() {
+        document.getElementById('sim-title').innerText = "6.1 Simple Harmonic Motion";
+        document.getElementById('sim-desc').innerHTML = `
+            <h3>Hooke's Law</h3>
+            <p>Restoring Force: <span class="var">F<sub>s</sub> = -kx</span>.
+            <br>Period: <span class="var">T = 2&pi;&radic;(m/k)</span>.
+            <br>Observe the graph of Position vs. Time.</p>`;
+
+        document.getElementById('sim-controls').innerHTML = `
+            <div class="control-group">
+                <label>Mass (<i class="var">m</i>): <span id="v-m">1</span> kg</label>
+                <input type="range" id="in-m" min="0.5" max="3" step="0.5" value="1" oninput="reset_6_1()">
+            </div>
+            <div class="control-group">
+                <label>Spring Constant (<i class="var">k</i>): <span id="v-k">10</span> N/m</label>
+                <input type="range" id="in-k" min="5" max="30" value="10" oninput="reset_6_1()">
+            </div>
+            <button class="btn btn-green" onclick="state.running=!state.running; loop_6_1()">Play / Pause</button>
+            <button class="btn btn-red" onclick="reset_6_1()">Reset</button>
+            <div class="readout">Period (<i class="var">T</i>): <span id="out-t">0.0</span>s</div>
+        `;
+        reset_6_1();
+    }
+
+    function reset_6_1() {
+        state = {
+            m: parseFloat(document.getElementById('in-m').value),
+            k: parseFloat(document.getElementById('in-k').value),
+            t: 0, 
+            amp: 100, // Pixels
+            graph: [],
+            running: false
+        };
+        document.getElementById('v-m').innerText = state.m;
+        document.getElementById('v-k').innerText = state.k;
+        let T = 2 * Math.PI * Math.sqrt(state.m / state.k);
+        document.getElementById('out-t').innerText = T.toFixed(2);
+        draw_6_1();
+    }
+
+    function loop_6_1() {
+        if(!state.running || currentSim !== '6.1') return;
+        state.t += 0.05;
+        let w = Math.sqrt(state.k / state.m);
+        let x = state.amp * Math.cos(w * state.t);
+        
+        state.x = x;
+        state.graph.push(x);
+        if(state.graph.length > 300) state.graph.shift();
+        
+        draw_6_1();
+        animId = requestAnimationFrame(loop_6_1);
+    }
+
+    function draw_6_1() {
+        ctx.clearRect(0,0,700,450);
+        
+        let wallX = 50;
+        let eqX = 350;
+        let blockX = eqX + (state.running ? state.x : state.amp);
+        
+        // Wall
+        ctx.fillStyle = "#7f8c8d"; ctx.fillRect(wallX, 100, 20, 100);
+        
+        // Floor
+        ctx.beginPath(); ctx.moveTo(wallX, 200); ctx.lineTo(700, 200); ctx.stroke();
+        
+        // Spring
+        ctx.beginPath(); ctx.strokeStyle = "#333";
+        let coils = 20;
+        let springW = blockX - (wallX + 20);
+        let coilW = springW / coils;
+        ctx.moveTo(wallX+20, 150);
+        for(let i=0; i<coils; i++) {
+            ctx.lineTo(wallX+20 + coilW*(i+0.5), 150 + (i%2==0 ? 10 : -10));
+        }
+        ctx.lineTo(blockX, 150);
+        ctx.stroke();
+
+        // Block
+        ctx.fillStyle = "#3498db"; ctx.fillRect(blockX, 130, 40, 40);
+
+        // Equilibrium Line
+        ctx.strokeStyle = "green"; ctx.setLineDash([5,5]);
+        ctx.beginPath(); ctx.moveTo(eqX+20, 100); ctx.lineTo(eqX+20, 250); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = "green"; ctx.fillText("x=0", eqX+10, 265);
+
+        // Graph Overlay
+        ctx.fillStyle = "#fafafa"; ctx.fillRect(50, 300, 600, 120);
+        ctx.strokeStyle = "#bdc3c7"; ctx.strokeRect(50, 300, 600, 120);
+        
+        ctx.beginPath(); ctx.strokeStyle = "red";
+        state.graph.forEach((val, i) => {
+            let gx = 650 - (state.graph.length - i) * 2;
+            let gy = 360 - (val / 100) * 50; // Scale
+            if(i==0) ctx.moveTo(gx, gy); else ctx.lineTo(gx, gy);
+        });
+        ctx.stroke();
+        ctx.fillStyle = "#333"; ctx.fillText("Position vs Time", 60, 320);
+    }
+
+    // ===============================================
+    // === UNIT 7: TORQUE (Seesaw) ===
+    // ===============================================
+    function setup_7_1() {
+        document.getElementById('sim-title').innerText = "7.1 Torque & Equilibrium";
+        document.getElementById('sim-desc').innerHTML = `
+            <h3>Rotational Equilibrium</h3>
+            <p>Torque (<span class="var">&tau; = rFsin&theta;</span>) causes rotation. 
+            For the beam to balance, the net torque must be zero. 
+            <br><span class="var">&tau;<sub>net</sub> = &tau;<sub>ccw</sub> - &tau;<sub>cw</sub> = 0</span></p>`;
+
+        document.getElementById('sim-controls').innerHTML = `
+            <div class="control-group">
+                <label>Mass 1 (Left): <span id="v-m1">10</span> kg</label>
+                <input type="range" id="in-m1" min="5" max="20" value="10" oninput="update_7_1()">
+            </div>
+            <div class="control-group">
+                <label>Position 1 (<i class="var">r<sub>1</sub></i>): <span id="v-r1">2.0</span> m</label>
+                <input type="range" id="in-r1" min="0.5" max="3.0" step="0.5" value="2.0" oninput="update_7_1()">
+            </div>
+            <div class="control-group">
+                <label>Mass 2 (Right): <span id="v-m2">10</span> kg</label>
+                <input type="range" id="in-m2" min="5" max="20" value="10" oninput="update_7_1()">
+            </div>
+            <div class="control-group">
+                <label>Position 2 (<i class="var">r<sub>2</sub></i>): <span id="v-r2">2.0</span> m</label>
+                <input type="range" id="in-r2" min="0.5" max="3.0" step="0.5" value="2.0" oninput="update_7_1()">
+            </div>
+            <div class="readout">Net Torque: <span id="out-tau">0.0</span> N&middot;m</div>
+        `;
+        update_7_1();
+    }
+
+    function update_7_1() {
+        state = {
+            m1: parseFloat(document.getElementById('in-m1').value),
+            r1: parseFloat(document.getElementById('in-r1').value),
+            m2: parseFloat(document.getElementById('in-m2').value),
+            r2: parseFloat(document.getElementById('in-r2').value),
+        };
+        document.getElementById('v-m1').innerText = state.m1;
+        document.getElementById('v-r1').innerText = state.r1;
+        document.getElementById('v-m2').innerText = state.m2;
+        document.getElementById('v-r2').innerText = state.r2;
+
+        let tau1 = state.m1 * 9.8 * state.r1; // CCW (+)
+        let tau2 = state.m2 * 9.8 * state.r2; // CW (-)
+        state.net = tau1 - tau2;
+        
+        document.getElementById('out-tau').innerText = state.net.toFixed(1);
+        
+        // Calculate Tilt
+        state.angle = 0;
+        if (Math.abs(state.net) > 5) {
+            state.angle = state.net > 0 ? -20 : 20; // Tilt left or right
+        }
+        draw_7_1();
+    }
+
+    function draw_7_1() {
+        ctx.clearRect(0,0,700,450);
+        
+        let cx = 350, cy = 300;
+        
+        // Fulcrum
+        ctx.fillStyle = "#7f8c8d";
+        ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx-20, cy+40); ctx.lineTo(cx+20, cy+40); ctx.fill();
+
+        // Beam Rotation
+        ctx.save();
+        ctx.translate(cx, cy);
+        let rad = state.angle * Math.PI / 180;
+        ctx.rotate(rad);
+
+        // Beam
+        ctx.fillStyle = "#8e44ad"; ctx.fillRect(-250, -5, 500, 10);
+        
+        // Mass 1 (Left)
+        let x1 = -state.r1 * 80; // Scale
+        let s1 = state.m1 * 3;
+        ctx.fillStyle = "#e74c3c"; ctx.fillRect(x1 - s1/2, -5 - s1, s1, s1);
+        ctx.fillStyle = "white"; ctx.fillText(state.m1, x1-5, -10);
+
+        // Mass 2 (Right)
+        let x2 = state.r2 * 80;
+        let s2 = state.m2 * 3;
+        ctx.fillStyle = "#3498db"; ctx.fillRect(x2 - s2/2, -5 - s2, s2, s2);
+        ctx.fillStyle = "white"; ctx.fillText(state.m2, x2-5, -10);
+
+        ctx.restore();
+    }
 </script>
 
 </body>
