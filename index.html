@@ -79,10 +79,11 @@
         <h1>AP Physics 1 Lab</h1>
         
         <div class="unit-header" onclick="toggleMenu('u1-menu')">Unit 1: Kinematics <span>▼</span></div>
-        <div id="u1-menu" class="sub-menu open">
-            <button class="nav-btn active" onclick="loadSim('1.1')">1.1 Position & Velocity</button>
+        <div id="u1-menu" class="sub-menu">
+            <button class="nav-btn" onclick="loadSim('1.1')">1.1 Position & Velocity</button>
             <button class="nav-btn" onclick="loadSim('1.2')">1.2 Acceleration (1D)</button>
             <button class="nav-btn" onclick="loadSim('1.3')">1.3 Projectile Motion</button>
+            <button class="nav-btn" onclick="loadSim('1.4')">1.4 Relative Motion (River)</button>
         </div>
 
         <div class="unit-header" onclick="toggleMenu('u2-menu')">Unit 2: Dynamics <span>▼</span></div>
@@ -112,6 +113,7 @@
         <div class="unit-header" onclick="toggleMenu('u6-menu')">Unit 6: SHM <span>▼</span></div>
         <div id="u6-menu" class="sub-menu">
             <button class="nav-btn" onclick="loadSim('6.1')">6.1 Spring Mass Systems</button>
+            <button class="nav-btn" onclick="loadSim('6.2')">6.2 The Pendulum</button>
         </div>
 
 <div class="unit-header" onclick="toggleMenu('u7-menu')">Unit 7: Torque & Rotation <span>▼</span></div>
@@ -173,6 +175,8 @@
             case '1.1': setup_1_1(); break;
             case '1.2': setup_1_2(); break;
             case '1.3': setup_1_3(); break;
+            case '1.4': setup_1_4(); break; 
+            case '6.2': setup_6_2(); break;
             case '2.1': setup_2_1(); break;
             case '2.2': setup_2_2(); break;
             case '2.3': setup_2_3(); break;
@@ -1622,6 +1626,235 @@
             ctx.strokeStyle = "rgba(0,0,0,0.1)"; ctx.lineWidth=2;
             ctx.beginPath(); ctx.arc(cx, cy, armLen, 0, Math.PI*2); ctx.stroke();
         }
+    }
+    // ===============================================
+    // === UNIT 1.4: RELATIVE MOTION (River Boat) ===
+    // ===============================================
+    function setup_1_4() {
+        document.getElementById('sim-title').innerText = "1.4 Relative Motion (Reference Frames)";
+        document.getElementById('sim-desc').innerHTML = `
+            <h3>Adding Velocity Vectors</h3>
+            <p>A boat moves relative to the water, while the water moves relative to the ground.
+            <br>The Resultant Velocity (<span class="var">v<sub>total</sub></span>) is the vector sum: <span class="var">v<sub>boat</sub> + v<sub>river</sub></span>.
+            <br><i>Challenge: Can you aim the boat to land directly across?</i></p>`;
+
+        document.getElementById('sim-controls').innerHTML = `
+            <div class="control-group">
+                <label>Boat Speed (<i class="var">v<sub>b</sub></i>): <span id="v-vb">5</span> m/s</label>
+                <input type="range" id="in-vb" min="1" max="10" value="5" oninput="reset_1_4()">
+            </div>
+            <div class="control-group">
+                <label>River Speed (<i class="var">v<sub>r</sub></i>): <span id="v-vr">3</span> m/s</label>
+                <input type="range" id="in-vr" min="0" max="8" value="3" oninput="reset_1_4()">
+            </div>
+            <div class="control-group">
+                <label>Heading Angle (<i class="var">&theta;</i>): <span id="v-ang">90</span>&deg;</label>
+                <input type="range" id="in-ang" min="45" max="135" value="90" oninput="reset_1_4()">
+            </div>
+            <button class="btn btn-green" onclick="state.running=!state.running; loop_1_4()">Launch</button>
+            <button class="btn btn-red" onclick="reset_1_4()">Reset</button>
+        `;
+        reset_1_4();
+    }
+
+    function reset_1_4() {
+        state = {
+            vb: parseFloat(document.getElementById('in-vb').value),
+            vr: parseFloat(document.getElementById('in-vr').value),
+            ang: parseFloat(document.getElementById('in-ang').value),
+            x: 350, // Start middle bottom
+            y: 400,
+            path: [],
+            running: false
+        };
+        // Angle 90 is straight UP. 0 is Right.
+        // Convert Heading (degrees) to Radians.
+        // Input: 90 is straight up. Canvas: -PI/2 is straight up. 
+        // Let's use math angle: 90 deg = PI/2.
+        
+        document.getElementById('v-vb').innerText = state.vb;
+        document.getElementById('v-vr').innerText = state.vr;
+        document.getElementById('v-ang').innerText = state.ang;
+        
+        state.path.push({x: state.x, y: state.y});
+        draw_1_4();
+    }
+
+    function loop_1_4() {
+        if(!state.running || currentSim !== '1.4') return;
+        
+        let dt = 0.05;
+        let rad = state.ang * Math.PI / 180; // Input angle (90 is up)
+        
+        // Boat Velocity Components (Relative to Water)
+        // Cos(90) = 0. Sin(90) = 1.
+        let vbx = state.vb * Math.cos(rad); 
+        let vby = -state.vb * Math.sin(rad); // Negative because Up is -Y
+        
+        // River Velocity (Relative to Ground)
+        let vrx = state.vr; // Flowing Right
+        let vry = 0;
+        
+        // Total Velocity
+        let vtx = vbx + vrx;
+        let vty = vby + vry;
+        
+        state.x += vtx * 5 * dt; // Scale factor 5
+        state.y += vty * 5 * dt;
+        
+        state.path.push({x: state.x, y: state.y});
+        
+        // Stop at other bank (Y=50) or off screen
+        if (state.y < 50 || state.x > 700 || state.x < 0) state.running = false;
+        
+        draw_1_4();
+        animId = requestAnimationFrame(loop_1_4);
+    }
+
+    function draw_1_4() {
+        ctx.clearRect(0,0,700,450);
+        
+        // River Water
+        ctx.fillStyle = "#3498db"; ctx.fillRect(0, 50, 700, 350);
+        
+        // Banks
+        ctx.fillStyle = "#27ae60"; 
+        ctx.fillRect(0, 0, 700, 50); // Top Bank
+        ctx.fillRect(0, 400, 700, 50); // Bottom Bank
+        
+        // Path
+        ctx.strokeStyle = "white"; ctx.setLineDash([5,5]); ctx.beginPath();
+        state.path.forEach((p,i) => {
+            if(i==0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+        });
+        ctx.stroke(); ctx.setLineDash([]);
+        
+        // Boat
+        ctx.save();
+        ctx.translate(state.x, state.y);
+        // Rotate to match HEADING (not actual path)
+        ctx.rotate( - (state.ang * Math.PI/180) + Math.PI/2 ); // Adjust for canvas
+        
+        ctx.fillStyle = "#e67e22";
+        ctx.beginPath(); ctx.moveTo(0, -15); ctx.lineTo(10, 10); ctx.lineTo(-10, 10); ctx.fill();
+        ctx.restore();
+        
+        // Vectors (drawn at boat)
+        if(state.running || state.y > 350) {
+            // Boat Vector (Red)
+            let rad = state.ang * Math.PI / 180;
+            drawVector(state.x, state.y, 40*Math.cos(rad), -40*Math.sin(rad), "red");
+            
+            // River Vector (Blue)
+            drawVector(state.x, state.y, state.vr*10, 0, "blue");
+            
+            // Resultant (Green) - Only show if moving or specifically desired
+             let vbx = state.vb * Math.cos(rad); 
+             let vrx = state.vr;
+             let vby = state.vb * Math.sin(rad); // Magnitude up
+             
+             // Resultant X = vbx + vrx, Y = vby
+             // drawVector(state.x, state.y, (vbx+vrx)*5, -vby*5, "#f1c40f");
+        }
+    }
+
+
+    // ===============================================
+    // === UNIT 6.2: THE PENDULUM ===
+    // ===============================================
+    function setup_6_2() {
+        document.getElementById('sim-title').innerText = "6.2 The Simple Pendulum";
+        document.getElementById('sim-desc').innerHTML = `
+            <h3>Period of a Pendulum</h3>
+            <p>The Period (<span class="var">T</span>) depends on length (<span class="var">L</span>) and gravity (<span class="var">g</span>), but NOT mass.
+            <br>Eq: <span class="var">T = 2&pi;&radic;(L/g)</span>.
+            <br><i>Experiment: Change the mass and see if the period changes!</i></p>`;
+
+        document.getElementById('sim-controls').innerHTML = `
+            <div class="control-group">
+                <label>Length (<i class="var">L</i>): <span id="v-len">1.0</span> m</label>
+                <input type="range" id="in-len" min="0.5" max="2.5" step="0.1" value="1.0" oninput="reset_6_2()">
+            </div>
+            <div class="control-group">
+                <label>Mass (<i class="var">m</i>): <span id="v-m">1.0</span> kg</label>
+                <input type="range" id="in-m" min="0.1" max="5.0" step="0.1" value="1.0" oninput="reset_6_2()">
+            </div>
+            <div class="control-group">
+                <label>Gravity (<i class="var">g</i>): <span id="v-g">9.8</span> m/s²</label>
+                <input type="range" id="in-g" min="1.6" max="20" step="0.1" value="9.8" oninput="reset_6_2()">
+            </div>
+            <button class="btn btn-green" onclick="state.running=!state.running; loop_6_2()">Swing</button>
+            <div class="readout">Period (<i class="var">T</i>): <span id="out-t">0.00</span> s</div>
+        `;
+        reset_6_2();
+    }
+
+    function reset_6_2() {
+        state = {
+            L: parseFloat(document.getElementById('in-len').value),
+            m: parseFloat(document.getElementById('in-m').value),
+            g: parseFloat(document.getElementById('in-g').value),
+            theta: Math.PI / 6, // Start at 30 degrees
+            omega: 0,
+            t: 0,
+            running: false
+        };
+        
+        let T = 2 * Math.PI * Math.sqrt(state.L / state.g);
+        
+        document.getElementById('v-len').innerText = state.L;
+        document.getElementById('v-m').innerText = state.m;
+        document.getElementById('v-g').innerText = state.g;
+        document.getElementById('out-t').innerText = T.toFixed(2);
+        
+        draw_6_2();
+    }
+
+    function loop_6_2() {
+        if(!state.running || currentSim !== '6.2') return;
+        
+        // Physics (Simple Harmonic Approx for small angles)
+        // alpha = -(g/L) * sin(theta)
+        let alpha = -(state.g / state.L) * Math.sin(state.theta);
+        let dt = 0.03;
+        
+        state.omega += alpha * dt;
+        state.theta += state.omega * dt;
+        
+        // Dampening (Air resistance)
+        state.omega *= 0.999; 
+
+        draw_6_2();
+        animId = requestAnimationFrame(loop_6_2);
+    }
+
+    function draw_6_2() {
+        ctx.clearRect(0,0,700,450);
+        
+        let cx = 350;
+        let cy = 50;
+        let scale = 150; // 150px = 1m
+        
+        let bobX = cx + (state.L * scale) * Math.sin(state.theta);
+        let bobY = cy + (state.L * scale) * Math.cos(state.theta);
+        
+        // Ceiling
+        ctx.fillStyle = "#7f8c8d"; ctx.fillRect(250, 40, 200, 10);
+        
+        // String
+        ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(bobX, bobY);
+        ctx.strokeStyle = "#333"; ctx.lineWidth = 2; ctx.stroke();
+        
+        // Bob (Size depends on Mass)
+        let r = 10 + state.m * 5;
+        ctx.beginPath(); ctx.arc(bobX, bobY, r, 0, Math.PI*2);
+        ctx.fillStyle = "#8e44ad"; ctx.fill();
+        ctx.strokeStyle = "#333"; ctx.lineWidth=1; ctx.stroke();
+        
+        // Vertical Reference (Ghost)
+        ctx.setLineDash([5,5]); ctx.strokeStyle="#ccc";
+        ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx, 400); ctx.stroke();
+        ctx.setLineDash([]);
     }
 </script>
 
