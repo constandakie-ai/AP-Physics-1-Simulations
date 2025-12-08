@@ -107,6 +107,7 @@
         <div id="u4-menu" class="sub-menu">
             <button class="nav-btn" onclick="loadSim('4.1')">4.1 Conservation of Energy</button>
             <button class="nav-btn" onclick="loadSim('4.2')">4.2 Work & Power</button>
+            <button class="nav-btn" onclick="loadSim('4.3')">4.3 Elastic Potential Energy</button>
         </div>
 
 <div class="unit-header" onclick="toggleMenu('u5-menu')">Unit 5: Momentum <span>▼</span></div>
@@ -964,10 +965,12 @@
             case '2.3': setup_2_3(); break;
             case '2.4': setup_2_4(); break; // New Friction Lab
             case '2.5': setup_2_5(); break; // New Elevator Lab
+            case '2.6': setup_2_6(); break; // New Terminal Velocity
             case '3.1': setup_3_1(); break;
             case '3.2': setup_3_2(); break;
             case '4.1': setup_4_1(); break;
             case '4.2': setup_4_2(); break; // New Work Lab
+            case '4.3': setup_4_3(); break; // New Spring Energy
             case '5.1': setup_5_1(); break; // Now Impulse
             case '5.2': setup_5_2(); break; // Now Conservation (Old 5.1)
             case '6.1': setup_6_1(); break;
@@ -2640,6 +2643,265 @@
         let fx = 50 + state.targetD * 30;
         ctx.strokeStyle = "red"; ctx.beginPath(); ctx.moveTo(fx, 200); ctx.lineTo(fx, 300); ctx.stroke();
         ctx.fillStyle = "red"; ctx.fillText("FINISH", fx-15, 190);
+    }
+    // ===============================================
+    // === UNIT 4.3: ELASTIC POTENTIAL ENERGY ===
+    // ===============================================
+    function setup_4_3() {
+        document.getElementById('sim-title').innerText = "4.3 Elastic Potential Energy";
+        document.getElementById('sim-desc').innerHTML = `
+            <h3>Spring Energy Conversion</h3>
+            <p>Compressing a spring stores Potential Energy (<span class="var">U<sub>s</sub> = &frac12;kx<sup>2</sup></span>).
+            <br>When released, this energy converts to Kinetic Energy (<span class="var">K = &frac12;mv<sup>2</sup></span>).
+            <br><i>Compress the spring and fire the block!</i></p>`;
+
+        document.getElementById('sim-controls').innerHTML = `
+            <div class="control-group">
+                <label>Spring Constant (<i class="var">k</i>): <span id="v-k">50</span> N/m</label>
+                <input type="range" id="in-k" min="10" max="100" value="50" oninput="reset_4_3()">
+            </div>
+            <div class="control-group">
+                <label>Compression (<i class="var">x</i>): <span id="v-x">0.5</span> m</label>
+                <input type="range" id="in-x" min="0.1" max="1.0" step="0.1" value="0.5" oninput="reset_4_3()">
+            </div>
+            <div class="control-group">
+                <label>Block Mass (<i class="var">m</i>): <span id="v-m">0.5</span> kg</label>
+                <input type="range" id="in-m" min="0.1" max="2.0" step="0.1" value="0.5" oninput="reset_4_3()">
+            </div>
+            <button class="btn btn-green" onclick="state.running=!state.running; loop_4_3()">Fire!</button>
+            <button class="btn btn-red" onclick="reset_4_3()">Reset</button>
+            <div class="readout">Exit Velocity: <span id="out-v">0.0</span> m/s</div>
+        `;
+        reset_4_3();
+    }
+
+    function reset_4_3() {
+        state = {
+            k: parseFloat(document.getElementById('in-k').value),
+            comp: parseFloat(document.getElementById('in-x').value),
+            m: parseFloat(document.getElementById('in-m').value),
+            x: 0, // Current block pos relative to equilibrium
+            v: 0,
+            released: false,
+            running: false
+        };
+        // Initial pos is negative compression
+        state.x = -state.comp;
+        
+        document.getElementById('v-k').innerText = state.k;
+        document.getElementById('v-x').innerText = state.comp;
+        document.getElementById('v-m').innerText = state.m;
+        document.getElementById('out-v').innerText = "0.0";
+        draw_4_3();
+    }
+
+    function loop_4_3() {
+        if(!state.running || currentSim !== '4.3') return;
+
+        let dt = 0.02;
+        
+        if (state.x < 0) {
+            // Spring Pushing Phase
+            // a = F/m = (-kx)/m. Since x is negative, force is positive (right)
+            let F = -state.k * state.x;
+            let a = F / state.m;
+            state.v += a * dt;
+            state.x += state.v * dt;
+        } else {
+            // Coasting Phase (Left the spring)
+            state.x += state.v * dt;
+            document.getElementById('out-v').innerText = state.v.toFixed(2);
+        }
+
+        if(state.x > 5) state.running = false; // Off screen
+        draw_4_3();
+        animId = requestAnimationFrame(loop_4_3);
+    }
+
+    function draw_4_3() {
+        ctx.clearRect(0,0,700,450);
+        
+        let wallX = 50;
+        let eqX = 250; // Equilibrium position (x=0)
+        let scale = 150; // 150px = 1m
+        
+        // Floor
+        ctx.beginPath(); ctx.moveTo(0,300); ctx.lineTo(700,300); ctx.stroke();
+        ctx.fillStyle = "#bdc3c7"; ctx.fillRect(0,300,700,20);
+        
+        // Wall
+        ctx.fillStyle = "#7f8c8d"; ctx.fillRect(0, 200, wallX, 100);
+        
+        // Current Block Position (pixels)
+        let blockPx = eqX + (state.x * scale);
+        
+        // Spring
+        
+
+[Image of spring potential energy diagram]
+
+        ctx.beginPath(); ctx.strokeStyle = "#333"; ctx.lineWidth=3;
+        let coils = 15;
+        // Spring connects wallX to blockPx
+        let springW = blockPx - wallX;
+        let coilW = springW / coils;
+        ctx.moveTo(wallX, 250);
+        for(let i=0; i<=coils; i++) {
+            ctx.lineTo(wallX + i*coilW, 250 + (i%2==0 ? 10 : -10));
+        }
+        ctx.stroke();
+        
+        // Block
+        ctx.fillStyle = "#e67e22"; ctx.fillRect(blockPx, 230, 40, 70);
+        
+        // Energy Bar Chart (Live)
+        let maxE = 0.5 * 100 * 1.0 * 1.0; // Benchmark max
+        let Us = (state.x < 0) ? 0.5 * state.k * state.x * state.x : 0;
+        let K = 0.5 * state.m * state.v * state.v;
+        let Total = Us + K;
+        
+        let bx = 500, by = 150;
+        let hScale = 100 / Total; // Normalize height to fit
+        if(Total === 0) hScale = 0;
+        
+        // Draw Bars
+        ctx.fillStyle = "#3498db"; ctx.fillRect(bx, by - Us*hScale, 30, Us*hScale); // Us
+        ctx.fillStyle = "#2ecc71"; ctx.fillRect(bx+40, by - K*hScale, 30, K*hScale); // K
+        
+        ctx.fillStyle = "black";
+        ctx.fillText("Us", bx+10, by+20);
+        ctx.fillText("K", bx+50, by+20);
+    }
+
+
+    // ===============================================
+    // === UNIT 2.6: DRAG & TERMINAL VELOCITY ===
+    // ===============================================
+    function setup_2_6() {
+        document.getElementById('sim-title').innerText = "2.6 Drag & Terminal Velocity";
+        document.getElementById('sim-desc').innerHTML = `
+            <h3>Forces on a Falling Object</h3>
+            <p>As velocity increases, Drag Force (<span class="var">F<sub>d</sub> = bv</span>) increases upwards.
+            <br>Eventually, Drag equals Weight (<span class="var">F<sub>d</sub> = F<sub>g</sub></span>).
+            <br>At this point, acceleration is zero and the object reaches <b>Terminal Velocity</b>.</p>`;
+
+        document.getElementById('sim-controls').innerHTML = `
+            <div class="control-group">
+                <label>Mass (<i class="var">m</i>): <span id="v-m">70</span> kg</label>
+                <input type="range" id="in-m" min="40" max="100" value="70" oninput="reset_2_6()">
+            </div>
+            <div class="control-group">
+                <label>Drag Coeff (<i class="var">b</i>): <span id="v-b">0.5</span></label>
+                <input type="range" id="in-b" min="0.1" max="2.0" step="0.1" value="0.5" oninput="reset_2_6()">
+            </div>
+            <button class="btn btn-green" onclick="state.running=!state.running; loop_2_6()">Drop</button>
+            <button class="btn btn-red" onclick="reset_2_6()">Reset</button>
+            <div class="readout">Vel: <span id="out-v">0.0</span> m/s | Accel: <span id="out-a">9.8</span> m/s²</div>
+        `;
+        reset_2_6();
+    }
+
+    function reset_2_6() {
+        state = {
+            m: parseFloat(document.getElementById('in-m').value),
+            b: parseFloat(document.getElementById('in-b').value),
+            v: 0, y: 50, t: 0,
+            graphData: [],
+            running: false
+        };
+        document.getElementById('v-m').innerText = state.m;
+        document.getElementById('v-b').innerText = state.b;
+        draw_2_6();
+    }
+
+    function loop_2_6() {
+        if(!state.running || currentSim !== '2.6') return;
+
+        let dt = 0.05;
+        state.t += dt;
+        
+        // Forces
+        let Fg = state.m * 9.8;     // Down (+)
+        let Fd = state.b * state.v * 5; // Up (-), simplified linear drag
+        
+        let Fnet = Fg - Fd;
+        let a = Fnet / state.m;
+        
+        state.v += a * dt;
+        // Visual Y (wrap around)
+        state.y += state.v * 0.1;
+        if(state.y > 450) state.y = 0;
+
+        // Data Update
+        document.getElementById('out-v').innerText = state.v.toFixed(1);
+        document.getElementById('out-a').innerText = a.toFixed(2);
+        
+        // Graph Data
+        state.graphData.push({t: state.t, v: state.v});
+
+        draw_2_6(Fg, Fd);
+        animId = requestAnimationFrame(loop_2_6);
+    }
+
+    function draw_2_6(Fg, Fd) {
+        ctx.clearRect(0,0,700,450);
+        
+        // Sky
+        ctx.fillStyle = "#85c1e9"; ctx.fillRect(0,0,700,450);
+        
+        // Cloud Reference (Moving Up to simulate falling)
+        let cloudY = (state.t * 20) % 500;
+        ctx.fillStyle = "white"; 
+        ctx.beginPath(); ctx.arc(100, 450-cloudY, 30, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(600, 200-cloudY, 40, 0, Math.PI*2); ctx.fill();
+
+        // Skydiver
+        let cx = 200, cy = 200; // Fixed visual position for FBD clarity
+        
+        
+
+[Image of skydiver free body diagram]
+
+        // Body
+        ctx.fillStyle = "#34495e"; ctx.fillRect(cx-15, cy-20, 30, 40);
+        ctx.beginPath(); ctx.arc(cx, cy-30, 10, 0, Math.PI*2); ctx.fill();
+        
+        // FBD Vectors
+        // Gravity
+        drawVector(cx, cy, 0, 80, "green"); // Constant
+        ctx.fillStyle = "black"; ctx.fillText("Fg", cx+10, cy+40);
+        
+        // Drag (Grows)
+        if(Fd) {
+            let dragLen = (Fd / Fg) * 80; // Scale relative to gravity
+            drawVector(cx, cy, 0, -dragLen, "red");
+            ctx.fillText("Fd", cx+10, cy-dragLen);
+        }
+
+        // --- GRAPH ---
+        let gx = 350, gy = 50, gw = 300, gh = 350;
+        ctx.fillStyle = "rgba(255,255,255,0.8)"; ctx.fillRect(gx, gy, gw, gh);
+        ctx.strokeStyle = "black"; ctx.strokeRect(gx, gy, gw, gh);
+        
+        // Plot v vs t
+        ctx.strokeStyle = "blue"; ctx.lineWidth = 2; ctx.beginPath();
+        let maxV = 100; // Scale
+        state.graphData.forEach((p, i) => {
+            let px = gx + p.t * 5;
+            let py = (gy + gh) - (p.v / maxV) * gh;
+            if (px < gx + gw) {
+                if(i==0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+            }
+        });
+        ctx.stroke();
+        ctx.fillStyle = "black"; ctx.fillText("Velocity vs Time", gx+10, gy+20);
+        
+        // Terminal Velocity Line (dashed)
+        let vt = (state.m * 9.8) / (state.b * 5);
+        let vtY = (gy + gh) - (vt / maxV) * gh;
+        ctx.strokeStyle = "green"; ctx.setLineDash([5,5]);
+        ctx.beginPath(); ctx.moveTo(gx, vtY); ctx.lineTo(gx+gw, vtY); ctx.stroke();
+        ctx.setLineDash([]);
     }
 </script>
 
