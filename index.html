@@ -84,6 +84,7 @@
             <button class="nav-btn" onclick="loadSim('1.2')">1.2 Acceleration (1D)</button>
             <button class="nav-btn" onclick="loadSim('1.3')">1.3 Projectile Motion</button>
             <button class="nav-btn" onclick="loadSim('1.4')">1.4 Relative Motion (River)</button>
+            <button class="nav-btn" onclick="loadSim('1.5')">1.5 Graph Matching Game</button>
         </div>
 
         <div class="unit-header" onclick="toggleMenu('u2-menu')">Unit 2: Dynamics <span>▼</span></div>
@@ -120,6 +121,7 @@
 <div id="u7-menu" class="sub-menu">
     <button class="nav-btn" onclick="loadSim('7.1')">7.1 Torque & Equilibrium</button>
     <button class="nav-btn" onclick="loadSim('7.2')">7.2 Rotational Inertia & Ang. Momentum</button>
+    <button class="nav-btn" onclick="loadSim('7.3')">7.3 Rotational Kinematics</button>
 </div>
     </aside>
 
@@ -950,6 +952,7 @@
             case '1.2': setup_1_2(); break;
             case '1.3': setup_1_3(); break;
             case '1.4': setup_1_4(); break; // New River Boat
+            case '1.5': setup_1_5(); break; // New Graph Match
             case '2.1': setup_2_1(); break;
             case '2.2': setup_2_2(); break;
             case '2.3': setup_2_3(); break;
@@ -963,6 +966,7 @@
             case '6.2': setup_6_2(); break; // New Pendulum
             case '7.1': setup_7_1(); break; // Torque (Seesaw)
             case '7.2': setup_7_2(); break; // Rotational Inertia (New)
+            case '7.3': setup_7_3(); break; // New Rotational Kinematics
         }
     }
 
@@ -1855,6 +1859,241 @@
         ctx.setLineDash([5,5]); ctx.strokeStyle="#ccc";
         ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx, 400); ctx.stroke();
         ctx.setLineDash([]);
+    }
+    // ===============================================
+    // === UNIT 1.5: GRAPH MATCHING GAME ===
+    // ===============================================
+    function setup_1_5() {
+        document.getElementById('sim-title').innerText = "1.5 Graph Matching Challenge";
+        document.getElementById('sim-desc').innerHTML = `
+            <h3>Match the Slope!</h3>
+            <p>The slope of a Position vs. Time graph represents <b>Velocity</b>.
+            <br>Try to adjust the velocity slider in real-time to match the <span style="color:#95a5a6; font-weight:bold;">Gray Target Line</span> with your <span style="color:#e74c3c; font-weight:bold;">Red Line</span>.
+            <br><i>Tip: If the gray line goes down, you need negative velocity!</i></p>`;
+
+        document.getElementById('sim-controls').innerHTML = `
+            <div class="control-group">
+                <label>Velocity (<i class="var">v</i>): <span id="v-val">0</span> m/s</label>
+                <input type="range" id="in-v" min="-10" max="10" value="0" step="1" oninput="state.v=parseFloat(this.value); document.getElementById('v-val').innerText=state.v;">
+            </div>
+            <button class="btn btn-green" onclick="start_1_5()">Start Challenge</button>
+            <button class="btn btn-red" onclick="reset_1_5()">Reset / New Graph</button>
+            <div class="readout" id="score-disp" style="font-size: 1.2rem; text-align:center;">Score: 0%</div>
+        `;
+        reset_1_5();
+    }
+
+    function reset_1_5() {
+        state = { x: 0, v: 0, t: 0, running: false, playerPath: [], targetPath: [] };
+        document.getElementById('in-v').value = 0; 
+        document.getElementById('v-val').innerText = "0";
+        document.getElementById('score-disp').innerText = "Score: 0%";
+        
+        // Generate Random Target Path (3 segments)
+        // Segment 1: 0-3s
+        let t = 0; let x = 0;
+        let segs = [
+            {dur: 3, v: Math.floor(Math.random()*8)},      // Positive start
+            {dur: 3, v: Math.floor(Math.random()*10)-5},   // Mixed
+            {dur: 3, v: -Math.floor(Math.random()*8)}      // Negative end
+        ];
+        
+        segs.forEach(seg => {
+            for(let i=0; i<seg.dur*20; i++) { // 20 steps per sec
+                x += seg.v * 0.05;
+                t += 0.05;
+                state.targetPath.push({t:t, x:x});
+            }
+        });
+        draw_1_5();
+    }
+
+    function start_1_5() {
+        if(state.running) return;
+        state.x = 0; state.t = 0; state.v = 0; state.playerPath = [];
+        state.running = true;
+        document.getElementById('in-v').value = 0; // Reset slider to 0 at start
+        loop_1_5();
+    }
+
+    function loop_1_5() {
+        if(!state.running || currentSim !== '1.5') return;
+        
+        state.t += 0.05;
+        state.x += state.v * 0.05;
+        state.playerPath.push({t: state.t, x: state.x});
+
+        // End condition
+        if(state.t >= 9.0) { // 9 seconds total
+            state.running = false;
+            calcScore_1_5();
+        } else {
+            draw_1_5();
+            animId = requestAnimationFrame(loop_1_5);
+        }
+    }
+
+    function calcScore_1_5() {
+        let error = 0;
+        let count = 0;
+        for(let i=0; i<state.playerPath.length; i++) {
+            if(i < state.targetPath.length) {
+                let diff = Math.abs(state.playerPath[i].x - state.targetPath[i].x);
+                error += diff;
+                count++;
+            }
+        }
+        // Normalize score: 0 error = 100%. avg error of 5m = 0%.
+        let avgError = error / count;
+        let score = Math.max(0, 100 - (avgError * 10));
+        document.getElementById('score-disp').innerText = "Final Score: " + score.toFixed(1) + "%";
+    }
+
+    function draw_1_5() {
+        ctx.clearRect(0,0,700,450);
+        
+        // Draw Axes
+        ctx.strokeStyle = "#333"; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(50, 225); ctx.lineTo(650, 225); ctx.stroke(); // t-axis
+        ctx.beginPath(); ctx.moveTo(50, 50); ctx.lineTo(50, 400); ctx.stroke(); // x-axis
+        ctx.fillText("Time (t)", 600, 240); ctx.fillText("Position (x)", 20, 50);
+
+        // Draw Target Path (Gray)
+        ctx.strokeStyle = "#95a5a6"; ctx.lineWidth = 8; ctx.lineCap = "round"; ctx.beginPath();
+        state.targetPath.forEach((p, i) => {
+            let px = 50 + p.t * 60; // Scale time
+            let py = 225 - p.x * 5; // Scale position
+            if(i==0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        });
+        ctx.stroke();
+
+        // Draw Player Path (Red)
+        ctx.strokeStyle = "#e74c3c"; ctx.lineWidth = 3; ctx.beginPath();
+        state.playerPath.forEach((p, i) => {
+            let px = 50 + p.t * 60; 
+            let py = 225 - p.x * 5;
+            if(i==0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        });
+        ctx.stroke();
+
+        // Current Marker
+        let cx = 50 + state.t * 60;
+        let cy = 225 - state.x * 5;
+        
+        // Car Icon
+        ctx.fillStyle = "#e74c3c"; ctx.fillRect(cx-10, cy-5, 20, 10);
+    }
+
+
+    // ===============================================
+    // === UNIT 7.3: ROTATIONAL KINEMATICS ===
+    // ===============================================
+    function setup_7_3() {
+        document.getElementById('sim-title').innerText = "7.3 Rotational Kinematics";
+        document.getElementById('sim-desc').innerHTML = `
+            <h3>Linear vs. Angular</h3>
+            <p>Angular variables are analogous to linear ones:
+            <br>Disp: <span class="var">x</span> (m) &rarr; <span class="var">&theta;</span> (rad)
+            <br>Vel: <span class="var">v</span> (m/s) &rarr; <span class="var">&omega;</span> (rad/s)
+            <br>Acc: <span class="var">a</span> (m/s²) &rarr; <span class="var">&alpha;</span> (rad/s²)
+            <br><i>Watch the "Ladybug" on the rim to see linear velocity (<span class="var">v = r&omega;</span>).</i></p>`;
+
+        document.getElementById('sim-controls').innerHTML = `
+            <div class="control-group">
+                <label>Ang. Accel (<i class="var">&alpha;</i>): <span id="v-alpha">0.5</span> rad/s²</label>
+                <input type="range" id="in-alpha" min="-2" max="2" step="0.1" value="0.5" oninput="reset_7_3()">
+            </div>
+            <div class="readout">
+                Time: <span id="out-t">0.0</span> s<br>
+                Ang Vel (<i class="var">&omega;</i>): <span id="out-w">0.0</span> rad/s<br>
+                Angle (<i class="var">&theta;</i>): <span id="out-th">0.0</span> rad
+            </div>
+            <button class="btn btn-green" onclick="state.running=!state.running; loop_7_3()">Spin</button>
+            <button class="btn btn-red" onclick="reset_7_3()">Reset</button>
+        `;
+        reset_7_3();
+    }
+
+    function reset_7_3() {
+        state = {
+            alpha: parseFloat(document.getElementById('in-alpha').value),
+            w: 0, theta: 0, t: 0, running: false
+        };
+        document.getElementById('v-alpha').innerText = state.alpha;
+        updateReadout_7_3();
+        draw_7_3();
+    }
+
+    function loop_7_3() {
+        if(!state.running || currentSim !== '7.3') return;
+        
+        let dt = 0.05;
+        state.t += dt;
+        
+        // Kinematics: w = w0 + at
+        state.w += state.alpha * dt;
+        state.theta += state.w * dt;
+        
+        updateReadout_7_3();
+        draw_7_3();
+        animId = requestAnimationFrame(loop_7_3);
+    }
+
+    function updateReadout_7_3() {
+        document.getElementById('out-t').innerText = state.t.toFixed(1);
+        document.getElementById('out-w').innerText = state.w.toFixed(2);
+        document.getElementById('out-th').innerText = (state.theta % (2*Math.PI)).toFixed(2);
+    }
+
+    function draw_7_3() {
+        ctx.clearRect(0,0,700,450);
+        
+        let cx = 350, cy = 225;
+        let r = 120;
+
+        // Draw Disk
+        ctx.fillStyle = "#ecf0f1"; 
+        ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.fill();
+        ctx.strokeStyle = "#bdc3c7"; ctx.lineWidth = 3; ctx.stroke();
+
+        // Draw Reference Line (Radius)
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(state.theta);
+        
+        // Radius Line
+        ctx.strokeStyle = "#7f8c8d"; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(r, 0); ctx.stroke();
+        
+        // Ladybug at the edge
+        ctx.fillStyle = "#e74c3c"; ctx.beginPath(); ctx.arc(r, 0, 12, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = "black"; ctx.beginPath(); ctx.arc(r, -4, 3, 0, Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(r, 4, 3, 0, Math.PI*2); ctx.fill();
+        
+        // Linear Velocity Vector (Tangent)
+        // v = rw
+        // In local rotated space, tangent is vertical (perp to radius)
+        if(Math.abs(state.w) > 0.1) {
+            let vLen = state.w * 20;
+            drawVector(r, 0, 0, vLen, "#2ecc71"); // Green Tangent
+            ctx.fillStyle = "#2ecc71"; 
+            ctx.save(); ctx.rotate(-Math.PI/2); ctx.fillText("v", -vLen/2 - 10, r+20); ctx.restore();
+        }
+        
+        ctx.restore(); // Undo rotation
+
+        // Angular Velocity Indicator (Curved Arrow in Center)
+        if(Math.abs(state.w) > 0.1) {
+            let dir = state.w > 0 ? 1 : -1;
+            ctx.strokeStyle = "#3498db"; ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.arc(cx, cy, 40, -Math.PI/2, -Math.PI/2 + (dir * Math.PI), dir < 0); 
+            ctx.stroke();
+            // Arrowhead
+            let tipX = cx + 40 * Math.cos(-Math.PI/2 + dir*Math.PI);
+            let tipY = cy + 40 * Math.sin(-Math.PI/2 + dir*Math.PI);
+            ctx.fillStyle = "#3498db"; ctx.beginPath(); ctx.arc(tipX, tipY, 6, 0, Math.PI*2); ctx.fill();
+            ctx.fillText("ω", cx-5, cy-5);
+        }
     }
 </script>
 
