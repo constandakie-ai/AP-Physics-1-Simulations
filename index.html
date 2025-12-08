@@ -92,6 +92,8 @@
             <button class="nav-btn" onclick="loadSim('2.1')">2.1 Newton's 2nd Law</button>
             <button class="nav-btn" onclick="loadSim('2.2')">2.2 Inclined Planes</button>
             <button class="nav-btn" onclick="loadSim('2.3')">2.3 Connected Systems</button>
+            <button class="nav-btn" onclick="loadSim('2.4')">2.4 Static vs. Kinetic Friction</button>
+            <button class="nav-btn" onclick="loadSim('2.5')">2.5 Apparent Weight (Elevator)</button>
         </div>
 
         <div class="unit-header" onclick="toggleMenu('u3-menu')">Unit 3: Circ. Motion <span>▼</span></div>
@@ -956,6 +958,8 @@
             case '2.1': setup_2_1(); break;
             case '2.2': setup_2_2(); break;
             case '2.3': setup_2_3(); break;
+            case '2.4': setup_2_4(); break; // New Friction Lab
+            case '2.5': setup_2_5(); break; // New Elevator Lab
             case '3.1': setup_3_1(); break;
             case '3.2': setup_3_2(); break;
             // NEW UNITS
@@ -2094,6 +2098,253 @@
             ctx.fillStyle = "#3498db"; ctx.beginPath(); ctx.arc(tipX, tipY, 6, 0, Math.PI*2); ctx.fill();
             ctx.fillText("ω", cx-5, cy-5);
         }
+    }
+    // ===============================================
+    // === UNIT 2.4: STATIC VS KINETIC FRICTION ===
+    // ===============================================
+    function setup_2_4() {
+        document.getElementById('sim-title').innerText = "2.4 Friction Graphing Lab";
+        document.getElementById('sim-desc').innerHTML = `
+            <h3>The Friction "Hump"</h3>
+            <p>Static Friction (<span class="var">f<sub>s</sub></span>) matches your applied force until it reaches a maximum. 
+            Once the object moves, Kinetic Friction (<span class="var">f<sub>k</sub></span>) takes over and is usually lower.
+            <br><i>Slowly increase the Applied Force to see the break point!</i></p>`;
+
+        document.getElementById('sim-controls').innerHTML = `
+            <div class="control-group">
+                <label>Applied Force (<i class="var">F<sub>app</sub></i>): <span id="v-fa">0</span> N</label>
+                <input type="range" id="in-fa" min="0" max="50" value="0" step="0.5" oninput="state.Fa=parseFloat(this.value); update_2_4()">
+            </div>
+            <div class="readout">
+                Friction (<i class="var">f</i>): <span id="out-ff">0.0</span> N<br>
+                Status: <span id="out-stat" style="font-weight:bold; color:red;">Static</span>
+            </div>
+            <button class="btn btn-red" onclick="reset_2_4()">Reset Graph</button>
+        `;
+        reset_2_4();
+    }
+
+    function reset_2_4() {
+        state = {
+            Fa: 0, 
+            m: 5, 
+            mu_s: 0.6, 
+            mu_k: 0.4,
+            v: 0, x: 0,
+            graphData: [],
+            running: true // Running logic handled in update
+        };
+        document.getElementById('in-fa').value = 0;
+        update_2_4(); // Initial draw
+    }
+
+    function update_2_4() {
+        if(currentSim !== '2.4') return;
+        document.getElementById('v-fa').innerText = state.Fa;
+        
+        // Physics Calc
+        let Fn = state.m * 9.8;
+        let fs_max = state.mu_s * Fn;
+        let fk = state.mu_k * Fn;
+        
+        let friction = 0;
+        
+        if (state.v === 0) {
+            // STATIC REGION
+            if (state.Fa <= fs_max) {
+                friction = state.Fa;
+                document.getElementById('out-stat').innerText = "Static (Not Moving)";
+                document.getElementById('out-stat').style.color = "#c0392b";
+            } else {
+                // BREAKS LOOSE
+                state.v = 0.1; // Start moving
+            }
+        } 
+        
+        if (state.v > 0) {
+            // KINETIC REGION
+            friction = fk;
+            document.getElementById('out-stat').innerText = "Kinetic (Sliding)";
+            document.getElementById('out-stat').style.color = "#27ae60";
+            
+            // Accel
+            let Fnet = state.Fa - fk;
+            state.v += (Fnet / state.m) * 0.1;
+            state.x += state.v * 0.1;
+        }
+
+        document.getElementById('out-ff').innerText = friction.toFixed(1);
+        
+        // Add to graph (F_app vs Friction)
+        // We plot F_app on X, Friction on Y
+        state.graphData.push({x: state.Fa, y: friction});
+        
+        draw_2_4();
+    }
+
+    function draw_2_4() {
+        ctx.clearRect(0,0,700,450);
+        
+        // Split Screen: Visual Top, Graph Bottom
+        
+        // --- TOP: THE BLOCK ---
+        ctx.fillStyle = "#f0f3f5"; ctx.fillRect(0,0,700,200);
+        ctx.beginPath(); ctx.moveTo(0,180); ctx.lineTo(700,180); ctx.stroke();
+        
+        let bx = 50 + (state.x % 600); // Wrap for infinite slide
+        
+        // Block
+        ctx.fillStyle = "#e67e22"; ctx.fillRect(bx, 130, 50, 50);
+        
+        // Force Vectors
+        // Applied (Right)
+        if(state.Fa > 0) drawVector(bx+25, 155, state.Fa*3, 0, "black");
+        // Friction (Left)
+        let fVal = parseFloat(document.getElementById('out-ff').innerText);
+        if(fVal > 0) drawVector(bx+25, 155, -fVal*3, 0, "red");
+
+        // Microscopic View (Magnifying Glass)
+        
+        ctx.strokeStyle = "#7f8c8d"; ctx.lineWidth=2;
+        ctx.beginPath(); ctx.arc(bx+25, 180, 30, 0, Math.PI*2); ctx.stroke();
+        ctx.fillStyle = "rgba(255,255,255,0.8)"; ctx.fill();
+        // Teeth visualization
+        ctx.beginPath(); 
+        for(let i=-20; i<20; i+=5) {
+            let offset = (state.v > 0) ? (Date.now()/50)%10 : 0; // Jiggle if moving
+            ctx.moveTo(bx+25+i, 180); ctx.lineTo(bx+25+i+2, 175); // Top teeth
+            ctx.moveTo(bx+25+i+offset, 180); ctx.lineTo(bx+25+i+2+offset, 185); // Bottom teeth
+        }
+        ctx.stroke();
+
+        // --- BOTTOM: THE GRAPH ---
+        ctx.fillStyle = "white"; ctx.fillRect(0,200,700,250);
+        // Axes
+        ctx.strokeStyle = "black"; ctx.lineWidth=2;
+        ctx.beginPath(); ctx.moveTo(50, 400); ctx.lineTo(650, 400); ctx.stroke(); // X (F_app)
+        ctx.beginPath(); ctx.moveTo(50, 250); ctx.lineTo(50, 400); ctx.stroke(); // Y (F_frict)
+        ctx.fillText("Applied Force (N)", 300, 430);
+        ctx.save(); ctx.translate(30, 350); ctx.rotate(-Math.PI/2); ctx.fillText("Friction Force (N)", 0, 0); ctx.restore();
+
+        // Plot Data
+        ctx.strokeStyle = "blue"; ctx.lineWidth=3; ctx.beginPath();
+        state.graphData.forEach((p, i) => {
+            let px = 50 + p.x * 10;
+            let py = 400 - p.y * 5;
+            if(i==0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+        });
+        ctx.stroke();
+    }
+
+
+    // ===============================================
+    // === UNIT 2.5: ELEVATOR PHYSICS ===
+    // ===============================================
+    function setup_2_5() {
+        document.getElementById('sim-title').innerText = "2.5 Apparent Weight (Elevator)";
+        document.getElementById('sim-desc').innerHTML = `
+            <h3>Normal Force in an Elevator</h3>
+            <p>Your "Apparent Weight" is what a scale reads (<span class="var">F<sub>N</sub></span>).
+            <br>Accelerating Up: <span class="var">F<sub>N</sub> = mg + ma</span> (Feel heavy).
+            <br>Accelerating Down: <span class="var">F<sub>N</sub> = mg - ma</span> (Feel light).
+            <br><i>Controls: Hold the buttons to accelerate.</i></p>`;
+
+        document.getElementById('sim-controls').innerHTML = `
+            <div class="control-group">
+                <label>Mass (<i class="var">m</i>): <span id="v-m">60</span> kg</label>
+                <input type="range" id="in-m" min="40" max="100" value="60" oninput="reset_2_5()">
+            </div>
+            <div style="display:flex; gap:10px; margin-bottom:10px;">
+                <button class="btn btn-green" onmousedown="state.a=2" onmouseup="state.a=0" onmouseleave="state.a=0">▲ Accel Up</button>
+                <button class="btn btn-red" onmousedown="state.a=-2" onmouseup="state.a=0" onmouseleave="state.a=0">▼ Accel Down</button>
+            </div>
+            <div class="readout">
+                Scale Reading (<i class="var">F<sub>N</sub></i>): <span id="out-fn">0</span> N
+            </div>
+            <div class="readout">
+                Current Accel (<i class="var">a</i>): <span id="out-a">0</span> m/s²
+            </div>
+        `;
+        reset_2_5();
+    }
+
+    function reset_2_5() {
+        state = { m: parseFloat(document.getElementById('in-m').value), a: 0, v: 0, y: 225, running: true };
+        document.getElementById('v-m').innerText = state.m;
+        loop_2_5();
+    }
+
+    function loop_2_5() {
+        if(!state.running || currentSim !== '2.5') return;
+        
+        // Update physics
+        state.v += state.a * 0.05;
+        state.y -= state.v * 0.5; // Visual movement (inverted Y)
+        
+        // Limits
+        if(state.y < 50) { state.y = 50; state.v = 0; }
+        if(state.y > 400) { state.y = 400; state.v = 0; }
+        
+        // Calc Forces
+        let Fg = state.m * 9.8;
+        let Fn = state.m * (9.8 + state.a);
+        
+        document.getElementById('out-fn').innerText = Math.round(Fn);
+        document.getElementById('out-a').innerText = state.a;
+        
+        // Color Feedback for weight
+        let readout = document.getElementById('out-fn');
+        if(state.a > 0) readout.style.color = "red";       // Heavy
+        else if(state.a < 0) readout.style.color = "blue"; // Light
+        else readout.style.color = "black";                // Normal
+
+        draw_2_5(Fg, Fn);
+        animId = requestAnimationFrame(loop_2_5);
+    }
+
+    function draw_2_5(Fg, Fn) {
+        ctx.clearRect(0,0,700,450);
+        
+        // Elevator Shaft
+        ctx.fillStyle = "#34495e"; ctx.fillRect(200, 0, 300, 450);
+        
+        // Elevator Car
+        ctx.fillStyle = "#ecf0f1"; ctx.fillRect(220, state.y, 260, 200);
+        ctx.strokeStyle = "#bdc3c7"; ctx.lineWidth=5; ctx.strokeRect(220, state.y, 260, 200);
+        
+        // Person / Stick Figure
+        let cx = 350; 
+        let feetY = state.y + 190;
+        
+        // Scale
+        ctx.fillStyle = "#95a5a6"; ctx.fillRect(cx-20, feetY, 40, 10);
+        
+        // Body
+        
+        ctx.strokeStyle = "black"; ctx.lineWidth=3;
+        ctx.beginPath(); 
+        ctx.moveTo(cx, feetY); ctx.lineTo(cx, feetY-60); // Legs
+        ctx.moveTo(cx, feetY-60); ctx.lineTo(cx, feetY-110); // Torso
+        ctx.moveTo(cx-20, feetY-90); ctx.lineTo(cx+20, feetY-90); // Arms
+        ctx.stroke();
+        ctx.beginPath(); ctx.arc(cx, feetY-125, 15, 0, Math.PI*2); ctx.stroke(); // Head
+
+        // Free Body Diagram Arrows (Next to person)
+        let fbdX = 550;
+        let fbdY = 225;
+        
+        // Dot
+        ctx.fillStyle = "black"; ctx.beginPath(); ctx.arc(fbdX, fbdY, 5, 0, Math.PI*2); ctx.fill();
+        
+        // Gravity (Down, constant length)
+        drawVector(fbdX, fbdY, 0, 80, "#27ae60");
+        ctx.fillStyle = "#27ae60"; ctx.fillText("Fg", fbdX+10, fbdY+40);
+        
+        // Normal Force (Up, varies)
+        // Scale it: 80px = mg (normal weight)
+        let fnLen = (Fn / Fg) * 80;
+        drawVector(fbdX, fbdY, 0, -fnLen, "#c0392b");
+        ctx.fillStyle = "#c0392b"; ctx.fillText("Fn", fbdX+10, fbdY-fnLen/2);
     }
 </script>
 
