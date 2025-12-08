@@ -108,6 +108,7 @@
         <div id="u4-menu" class="sub-menu">
             <button class="nav-btn" onclick="loadSim('4.1')">4.1 Conservation of Energy</button>
             <button class="nav-btn" onclick="loadSim('4.2')">4.2 Work & Power</button>
+            <button class="nav-btn" onclick="loadSim('4.3')">4.3 Elastic Potential Energy</button>
         </div>
 
 <div class="unit-header" onclick="toggleMenu('u5-menu')">Unit 5: Momentum <span>▼</span></div>
@@ -195,6 +196,7 @@
             case '3.3': setup_3_3(); break; // New Vertical Circle
             case '4.1': setup_4_1(); break;
             case '4.2': setup_4_2(); break; // New Work Lab
+            case '4.3': setup_4_3(); break; // New Spring Energy
             case '5.1': setup_5_1(); break; // Now Impulse
             case '5.2': setup_5_2(); break; // Now Conservation (Old 5.1)
             case '6.1': setup_6_1(); break;
@@ -2693,6 +2695,139 @@
         ctx.beginPath(); ctx.moveTo(gx, vtY); ctx.lineTo(gx+gw, vtY); ctx.stroke();
         ctx.setLineDash([]);
         ctx.fillText("Terminal Vel", gx+gw-70, vtY-5);
+    }
+    // ===============================================
+    // === UNIT 4.3: ELASTIC POTENTIAL ENERGY ===
+    // ===============================================
+    function setup_4_3() {
+        document.getElementById('sim-title').innerText = "4.3 Elastic Potential Energy";
+        document.getElementById('sim-desc').innerHTML = `
+            <h3>Spring Energy Conversion</h3>
+            <p>Compressing a spring stores Potential Energy (<span class="var">U<sub>s</sub> = &frac12;kx<sup>2</sup></span>).
+            <br>When released, this energy converts to Kinetic Energy (<span class="var">K = &frac12;mv<sup>2</sup></span>).
+            <br><i>Compress the spring and fire the block!</i></p>`;
+
+        document.getElementById('sim-controls').innerHTML = `
+            <div class="control-group">
+                <label>Spring Constant (<i class="var">k</i>): <span id="v-k">50</span> N/m</label>
+                <input type="range" id="in-k" min="10" max="100" value="50" oninput="reset_4_3()">
+            </div>
+            <div class="control-group">
+                <label>Compression (<i class="var">x</i>): <span id="v-x">0.5</span> m</label>
+                <input type="range" id="in-x" min="0.1" max="1.0" step="0.1" value="0.5" oninput="reset_4_3()">
+            </div>
+            <div class="control-group">
+                <label>Block Mass (<i class="var">m</i>): <span id="v-m">0.5</span> kg</label>
+                <input type="range" id="in-m" min="0.1" max="2.0" step="0.1" value="0.5" oninput="reset_4_3()">
+            </div>
+            <button class="btn btn-green" onclick="state.running=!state.running; loop_4_3()">Fire!</button>
+            <button class="btn btn-red" onclick="reset_4_3()">Reset</button>
+            <div class="readout">Exit Velocity: <span id="out-v">0.0</span> m/s</div>
+        `;
+        reset_4_3();
+    }
+
+    function reset_4_3() {
+        state = {
+            k: parseFloat(document.getElementById('in-k').value),
+            comp: parseFloat(document.getElementById('in-x').value),
+            m: parseFloat(document.getElementById('in-m').value),
+            x: 0, // Current block pos relative to equilibrium
+            v: 0,
+            running: false
+        };
+        // Initial pos is negative compression
+        state.x = -state.comp;
+        
+        document.getElementById('v-k').innerText = state.k;
+        document.getElementById('v-x').innerText = state.comp;
+        document.getElementById('v-m').innerText = state.m;
+        document.getElementById('out-v').innerText = "0.0";
+        draw_4_3();
+    }
+
+    function loop_4_3() {
+        if(!state.running || currentSim !== '4.3') return;
+
+        let dt = 0.02;
+        
+        if (state.x < 0) {
+            // Spring Pushing Phase
+            // a = F/m = (-kx)/m. Since x is negative, force is positive (right)
+            let F = -state.k * state.x;
+            let a = F / state.m;
+            state.v += a * dt;
+            state.x += state.v * dt;
+        } else {
+            // Coasting Phase (Left the spring)
+            state.x += state.v * dt;
+            document.getElementById('out-v').innerText = state.v.toFixed(2);
+        }
+
+        if(state.x > 5) state.running = false; // Off screen
+        draw_4_3();
+        animId = requestAnimationFrame(loop_4_3);
+    }
+
+    function draw_4_3() {
+        ctx.clearRect(0,0,700,450);
+        
+        let wallX = 50;
+        let eqX = 250; // Equilibrium position (x=0)
+        let scale = 150; // 150px = 1m
+        
+        // Floor
+        ctx.beginPath(); ctx.moveTo(0,300); ctx.lineTo(700,300); ctx.stroke();
+        ctx.fillStyle = "#bdc3c7"; ctx.fillRect(0,300,700,20);
+        
+        // Wall
+        ctx.fillStyle = "#7f8c8d"; ctx.fillRect(0, 200, wallX, 100);
+        
+        // Current Block Position (pixels)
+        let blockPx = eqX + (state.x * scale);
+        
+        // Spring
+        ctx.beginPath(); ctx.strokeStyle = "#333"; ctx.lineWidth=3;
+        let coils = 15;
+        // Spring connects wallX to blockPx
+        let springW = blockPx - wallX;
+        let coilW = springW / coils;
+        ctx.moveTo(wallX, 250);
+        for(let i=0; i<=coils; i++) {
+            ctx.lineTo(wallX + i*coilW, 250 + (i%2==0 ? 10 : -10));
+        }
+        ctx.stroke();
+        
+        // Block
+        ctx.fillStyle = "#e67e22"; ctx.fillRect(blockPx, 230, 40, 70);
+        
+        // Energy Bar Chart (Live)
+        // Us = 0.5*k*x^2
+        let Us = (state.x < 0) ? 0.5 * state.k * state.x * state.x : 0;
+        let K = 0.5 * state.m * state.v * state.v;
+        
+        // Determine scale based on INITIAL energy so bars don't jump
+        let initE = 0.5 * state.k * state.comp * state.comp;
+        if(initE === 0) initE = 1;
+        
+        let bx = 500, by = 150;
+        let maxH = 100; // max pixel height for bar
+        
+        let hUs = (Us / initE) * maxH;
+        let hK = (K / initE) * maxH;
+        
+        // Draw Bars
+        ctx.fillStyle = "#3498db"; ctx.fillRect(bx, by - hUs, 30, hUs); // Us
+        ctx.fillStyle = "#2ecc71"; ctx.fillRect(bx+40, by - hK, 30, hK); // K
+        
+        // Labels
+        ctx.fillStyle = "black";
+        ctx.fillText("Us", bx+10, by+20);
+        ctx.fillText("K", bx+50, by+20);
+        
+        // Legend
+        ctx.font = "12px sans-serif";
+        ctx.fillText("Energy Conservation", bx, by-110);
     }
 </script>
 
