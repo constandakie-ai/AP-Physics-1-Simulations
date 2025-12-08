@@ -181,6 +181,8 @@
             case '1.1': setup_1_1(); break;
             case '1.2': setup_1_2(); break;
             case '1.3': setup_1_3(); break;
+            case '1.4': setup_1_4(); break; // New River Boat
+            case '1.5': setup_1_5(); break; // New Graph Match
             case '2.1': setup_2_1(); break;
             case '2.2': setup_2_2(); break;
             case '2.3': setup_2_3(); break;
@@ -188,9 +190,20 @@
             case '2.5': setup_2_5(); break; // New Elevator Lab
             case '3.1': setup_3_1(); break;
             case '3.2': setup_3_2(); break;
+            case '4.1': setup_4_1(); break;
+            case '4.2': setup_4_2(); break; // New Work Lab
+            case '5.1': setup_5_1(); break; // Now Impulse
+            case '5.2': setup_5_2(); break; // Now Conservation (Old 5.1)
+            case '6.1': setup_6_1(); break;
+            case '6.2': setup_6_2(); break; // New Pendulum
+            case '7.1': setup_7_1(); break; // Torque (Seesaw)
+            case '7.2': setup_7_2(); break; // Rotational Inertia (New)
+            case '7.3': setup_7_3(); break; // New Rotational Kinematics
         }
     }
-
+    // Load Default
+    loadSim('1.1');
+    
     // ===============================================
     // === UNIT 1: KINEMATICS (Clean, Vector Focus) ===
     // ===============================================
@@ -925,58 +938,6 @@
         for(let x=0; x<700; x+=step) { ctx.moveTo(x,0); ctx.lineTo(x,450); }
         for(let y=0; y<450; y+=step) { ctx.moveTo(0,y); ctx.lineTo(700,y); }
         ctx.stroke();
-    }
-
-    // Load Default
-    loadSim('1.1');
-// ===============================================
-    // === UPDATE: SWITCH LOGIC FOR NEW UNITS ===
-    // ===============================================
-    // NOTE: We hook into the existing loadSim function by overriding the switch momentarily 
-    // or you can manually update the switch in your code. 
-    // Ideally, update your existing 'switch(id)' block to include these cases:
-    /*
-        case '4.1': setup_4_1(); break;
-        case '5.1': setup_5_1(); break;
-        case '6.1': setup_6_1(); break;
-        case '7.1': setup_7_1(); break;
-    */
-    // Since I cannot edit your file directly, I will overwrite the loadSim function 
-    // to include the old AND new units.
-
-    // REPLACING THE PREVIOUS loadSim FUNCTION:
-    function loadSim(id) {
-        stopSim();
-        currentSim = id;
-        document.getElementById('sim-interface').classList.remove('hidden');
-        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-        if(event && event.target) event.target.classList.add('active'); 
-        document.getElementById('main-view').className = ''; 
-
-        switch(id) {
-            case '1.1': setup_1_1(); break;
-            case '1.2': setup_1_2(); break;
-            case '1.3': setup_1_3(); break;
-            case '1.4': setup_1_4(); break; // New River Boat
-            case '1.5': setup_1_5(); break; // New Graph Match
-            case '2.1': setup_2_1(); break;
-            case '2.2': setup_2_2(); break;
-            case '2.3': setup_2_3(); break;
-            case '2.4': setup_2_4(); break; // New Friction Lab
-            case '2.5': setup_2_5(); break; // New Elevator Lab
-            case '3.1': setup_3_1(); break;
-            case '3.2': setup_3_2(); break;
-            // NEW UNITS
-            case '4.1': setup_4_1(); break;
-            case '4.2': setup_4_2(); break; // New Work Lab
-            case '5.1': setup_5_1(); break; // Now Impulse
-            case '5.2': setup_5_2(); break; // Now Conservation (Old 5.1)
-            case '6.1': setup_6_1(); break;
-            case '6.2': setup_6_2(); break; // New Pendulum
-            case '7.1': setup_7_1(); break; // Torque (Seesaw)
-            case '7.2': setup_7_2(); break; // Rotational Inertia (New)
-            case '7.3': setup_7_3(); break; // New Rotational Kinematics
-        }
     }
 
     // ===============================================
