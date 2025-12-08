@@ -94,6 +94,7 @@
             <button class="nav-btn" onclick="loadSim('2.3')">2.3 Connected Systems</button>
             <button class="nav-btn" onclick="loadSim('2.4')">2.4 Static vs. Kinetic Friction</button>
             <button class="nav-btn" onclick="loadSim('2.5')">2.5 Apparent Weight (Elevator)</button>
+            <button class="nav-btn" onclick="loadSim('2.6')">2.6 Drag & Terminal Velocity</button>
         </div>
 
         <div class="unit-header" onclick="toggleMenu('u3-menu')">Unit 3: Circ. Motion <span>▼</span></div>
@@ -105,6 +106,7 @@
 <div class="unit-header" onclick="toggleMenu('u4-menu')">Unit 4: Energy <span>▼</span></div>
         <div id="u4-menu" class="sub-menu">
             <button class="nav-btn" onclick="loadSim('4.1')">4.1 Conservation of Energy</button>
+            <button class="nav-btn" onclick="loadSim('4.2')">4.2 Work & Power</button>
         </div>
 
 <div class="unit-header" onclick="toggleMenu('u5-menu')">Unit 5: Momentum <span>▼</span></div>
@@ -964,8 +966,8 @@
             case '2.5': setup_2_5(); break; // New Elevator Lab
             case '3.1': setup_3_1(); break;
             case '3.2': setup_3_2(); break;
-            // NEW UNITS
             case '4.1': setup_4_1(); break;
+            case '4.2': setup_4_2(); break; // New Work Lab
             case '5.1': setup_5_1(); break; // Now Impulse
             case '5.2': setup_5_2(); break; // Now Conservation (Old 5.1)
             case '6.1': setup_6_1(); break;
@@ -2347,6 +2349,297 @@
         let fnLen = (Fn / Fg) * 80;
         drawVector(fbdX, fbdY, 0, -fnLen, "#c0392b");
         ctx.fillStyle = "#c0392b"; ctx.fillText("Fn", fbdX+10, fbdY-fnLen/2);
+    }
+    // ===============================================
+    // === UNIT 3.3: VERTICAL CIRCULAR MOTION (Loop) ===
+    // ===============================================
+    function setup_3_3() {
+        document.getElementById('sim-title').innerText = "3.3 Vertical Circular Motion";
+        document.getElementById('sim-desc').innerHTML = `
+            <h3>Forces in a Vertical Loop</h3>
+            <p>In a vertical loop, Gravity (<span class="var">F<sub>g</sub></span>) and Normal Force (<span class="var">F<sub>N</sub></span>) work together to provide centripetal force.
+            <br><b>Top:</b> <span class="var">F<sub>net</sub> = F<sub>N</sub> + F<sub>g</sub></span>.
+            <br><b>Bottom:</b> <span class="var">F<sub>net</sub> = F<sub>N</sub> - F<sub>g</sub></span>.
+            <br><i>Watch what happens to F<sub>N</sub> if velocity is too low!</i></p>`;
+
+        document.getElementById('sim-controls').innerHTML = `
+            <div class="control-group">
+                <label>Radius (<i class="var">r</i>): <span id="v-r">5</span> m</label>
+                <input type="range" id="in-r" min="3" max="8" value="5" oninput="reset_3_3()">
+            </div>
+            <div class="control-group">
+                <label>Velocity (<i class="var">v</i>): <span id="v-v">10</span> m/s</label>
+                <input type="range" id="in-v" min="5" max="20" value="10" oninput="reset_3_3()">
+            </div>
+            <div class="readout">Normal Force (<i class="var">F<sub>N</sub></i>): <span id="out-fn">0</span> N</div>
+            <button class="btn btn-green" onclick="state.running=!state.running; loop_3_3()">Start / Stop</button>
+        `;
+        reset_3_3();
+    }
+
+    function reset_3_3() {
+        state = {
+            r: parseFloat(document.getElementById('in-r').value),
+            v: parseFloat(document.getElementById('in-v').value),
+            m: 100, // kg (Roller coaster cart)
+            angle: -Math.PI / 2, // Start at bottom
+            running: false,
+            crashed: false
+        };
+        document.getElementById('v-r').innerText = state.r;
+        document.getElementById('v-v').innerText = state.v;
+        draw_3_3();
+    }
+
+    function loop_3_3() {
+        if(!state.running || currentSim !== '3.3') return;
+        
+        // Angular velocity w = v/r
+        let w = state.v / state.r;
+        state.angle += w * 0.05; // Time step
+
+        // Physics Calc
+        let g = 9.8;
+        // Height relative to center (-r to +r) - actually sin component
+        let sinTheta = Math.sin(state.angle); 
+        
+        // Centripetal Force required: Fc = mv^2/r
+        let Fc = (state.m * state.v * state.v) / state.r;
+        
+        // Radial component of Gravity: Fg_radial = mg * sin(theta)
+        // Note: At top (sin=1), gravity points down (inward). At bottom (sin=-1), gravity points down (outward).
+        // Let's stick to standard angle: 0 = Right, PI/2 = Bottom... No, let's use standard unit circle.
+        // Top is 3PI/2 (270) or -PI/2? Visuals are easier if Top is -PI/2 in canvas y.
+        // Let's calculate purely based on position:
+        // Top: Fn + Fg = Fc  -> Fn = Fc - Fg
+        // Bottom: Fn - Fg = Fc -> Fn = Fc + Fg
+        
+        // General: Fn = Fc - Fg_radial_inward
+        // Fg is always down. Fg_radial_inward = -mg * sin(angle) (if angle 0 is right, -PI/2 is top)
+        let Fg_inward = state.m * g * Math.sin(state.angle); 
+        // Wait, at top (-PI/2), sin is -1. We want Fg inward (+) at top.
+        // Let's fix coordinate system: Top of canvas loop is angle = -PI/2.
+        
+        let Fn = Fc - (state.m * 9.8 * Math.sin(state.angle));
+        
+        // At top (-PI/2), sin is -1. Fn = Fc - (-mg) = Fc + mg? No.
+        // Top: Gravity helps Fc. Fn needs to do less work. Fn = Fc - Fg.
+        // Let's just use vector logic for the readout text to simplify.
+        // Top check:
+        let isTop = Math.abs(state.angle % (2*Math.PI) - (-Math.PI/2)) < 0.5;
+        
+        // If Fn < 0 at the top, it falls (Critical velocity check)
+        // v_min = sqrt(gr)
+        let v_min = Math.sqrt(9.8 * state.r);
+        
+        // Actual Fn calculation for display:
+        // Top: Fn = m(v^2/r) - mg
+        // Bottom: Fn = m(v^2/r) + mg
+        // Side: Fn = m(v^2/r)
+        // Continuous: Fn = m(v^2/r) + mg * sin(angle)  <-- Assuming angle -PI/2 is top... 
+        // Correct: Fn = mv²/r - mg*sin(theta) where theta is -PI/2 at top.
+        // If sin(-90) = -1... Fn = Fc - (-mg) = Fc + mg. WRONG.
+        // Let's keep it simple: Fg always points down.
+        
+        let Fg_down = state.m * 9.8;
+        let vertical_component = Math.sin(state.angle); // -1 at top, 1 at bottom (canvas coords)
+        
+        // Canvas Y increases downwards.
+        // Top of loop: Y is low. Angle -PI/2. Sin = -1.
+        // Gravity acts DOWN (+Y). Radial vector is UP (-Y). Gravity opposes Center.
+        // So at Top, Gravity is IN to center.
+        
+        let exactFn = Fc - (Fg_down * -Math.sin(state.angle)); 
+        
+        // Crash Check
+        if (exactFn < 0) {
+            state.running = false;
+            state.crashed = true;
+            document.getElementById('out-fn').innerText = "CRASH (v too low)";
+        } else {
+            document.getElementById('out-fn').innerText = Math.round(exactFn) + " N";
+        }
+
+        draw_3_3();
+        if(!state.crashed) animId = requestAnimationFrame(loop_3_3);
+    }
+
+    function draw_3_3() {
+        ctx.clearRect(0,0,700,450);
+        
+        let cx = 350, cy = 250;
+        let pxScale = 30; // 30px = 1m
+        let rPx = state.r * pxScale;
+        
+        // Track
+        ctx.beginPath(); ctx.strokeStyle = "#555"; ctx.lineWidth = 10;
+        ctx.arc(cx, cy, rPx, 0, Math.PI*2); ctx.stroke();
+        
+        // Ground
+        ctx.fillStyle = "#2c3e50"; ctx.fillRect(0, cy + rPx + 5, 700, 20);
+
+        // Cart Position
+        let cartX = cx + rPx * Math.cos(state.angle);
+        let cartY = cy + rPx * Math.sin(state.angle);
+
+        if(state.crashed) {
+            // Draw falling cart
+            cartY += 20; 
+            ctx.fillStyle = "red"; ctx.fillText("CRASH!", cx-20, cy);
+        }
+
+        // Draw Cart
+        ctx.save();
+        ctx.translate(cartX, cartY);
+        ctx.rotate(state.angle + Math.PI/2); // Align with track
+        
+        ctx.fillStyle = state.crashed ? "#c0392b" : "#e67e22";
+        ctx.fillRect(-15, -10, 30, 20); // Cart body
+        ctx.fillStyle = "black";
+        ctx.beginPath(); ctx.arc(-10, 10, 4, 0, Math.PI*2); ctx.fill(); // Wheels
+        ctx.beginPath(); ctx.arc(10, 10, 4, 0, Math.PI*2); ctx.fill();
+        ctx.restore();
+
+        // Vectors (Only if not crashed)
+        if (!state.crashed) {
+            // Gravity (Always Down)
+            drawVector(cartX, cartY, 0, 50, "#27ae60"); // Green Fixed Size
+            
+            // Normal Force (Towards Center)
+            let FnVal = parseFloat(document.getElementById('out-fn').innerText);
+            if(!isNaN(FnVal)) {
+                let scaleFn = FnVal / 50; // Visual scaling
+                if(scaleFn > 100) scaleFn = 100; // Cap visual size
+                
+                let normAngle = state.angle + Math.PI; // Inward
+                drawVector(cartX, cartY, scaleFn*Math.cos(normAngle), scaleFn*Math.sin(normAngle), "#2980b9"); // Blue
+            }
+        }
+    }
+
+
+    // ===============================================
+    // === UNIT 4.2: WORK & POWER ===
+    // ===============================================
+    function setup_4_2() {
+        document.getElementById('sim-title').innerText = "4.2 Work & Power";
+        document.getElementById('sim-desc').innerHTML = `
+            <h3>Calculating Work</h3>
+            <p>Work is the transfer of energy: <span class="var">W = Fd cos&theta;</span>.
+            <br>Only the component of force parallel to the displacement does work.
+            <br>Power is the rate of work: <span class="var">P = W / t</span>.</p>`;
+
+        document.getElementById('sim-controls').innerHTML = `
+            <div class="control-group">
+                <label>Force (<i class="var">F</i>): <span id="v-f">20</span> N</label>
+                <input type="range" id="in-f" min="0" max="50" value="20" oninput="reset_4_2()">
+            </div>
+            <div class="control-group">
+                <label>Angle (<i class="var">&theta;</i>): <span id="v-a">0</span>&deg;</label>
+                <input type="range" id="in-a" min="0" max="90" value="0" oninput="reset_4_2()">
+            </div>
+             <div class="control-group">
+                <label>Distance (<i class="var">d</i>): <span id="v-d">10</span> m</label>
+                <input type="range" id="in-d" min="5" max="20" value="10" oninput="reset_4_2()">
+            </div>
+            <button class="btn btn-green" onclick="state.running=!state.running; loop_4_2()">Pull Block</button>
+            <button class="btn btn-red" onclick="reset_4_2()">Reset</button>
+            <div class="readout">Work: <span id="out-w">0</span> J | Power: <span id="out-p">0</span> W</div>
+        `;
+        reset_4_2();
+    }
+
+    function reset_4_2() {
+        state = {
+            F: parseFloat(document.getElementById('in-f').value),
+            ang: parseFloat(document.getElementById('in-a').value),
+            targetD: parseFloat(document.getElementById('in-d').value),
+            x: 0, t: 0, running: false, finished: false
+        };
+        // Calc theoretical Work
+        let rad = state.ang * Math.PI / 180;
+        state.W_total = state.F * state.targetD * Math.cos(rad);
+        
+        document.getElementById('v-f').innerText = state.F;
+        document.getElementById('v-a').innerText = state.ang;
+        document.getElementById('v-d').innerText = state.targetD;
+        document.getElementById('out-w').innerText = "0";
+        document.getElementById('out-p').innerText = "0";
+        
+        draw_4_2();
+    }
+
+    function loop_4_2() {
+        if(!state.running || currentSim !== '4.2' || state.finished) return;
+        
+        // Move block
+        let dt = 0.05;
+        state.t += dt;
+        
+        // Arbitrary speed based on F (F=ma logic simplified for demo)
+        // a = Fx / m. Let m = 10.
+        let rad = state.ang * Math.PI / 180;
+        let Fx = state.F * Math.cos(rad);
+        let a = Fx / 10; 
+        if(a < 0.5) a = 0.5; // Min speed to ensure it moves
+        
+        let v = a * state.t;
+        state.x += v * dt;
+
+        // Current Work
+        let currentD = state.x;
+        if(currentD > state.targetD) {
+            currentD = state.targetD;
+            state.finished = true;
+            state.running = false;
+        }
+
+        let W = state.F * currentD * Math.cos(rad);
+        let P = W / state.t;
+
+        document.getElementById('out-w').innerText = W.toFixed(1);
+        document.getElementById('out-p').innerText = P.toFixed(1);
+
+        draw_4_2();
+        if(!state.finished) animId = requestAnimationFrame(loop_4_2);
+    }
+
+    function draw_4_2() {
+        ctx.clearRect(0,0,700,450);
+        ctx.fillStyle = "#f0f3f5"; ctx.fillRect(0,0,700,450);
+
+        // Floor
+        ctx.beginPath(); ctx.moveTo(0, 300); ctx.lineTo(700, 300); ctx.stroke();
+        // Distance Markers
+        ctx.fillStyle = "#7f8c8d";
+        for(let i=0; i<=state.targetD; i+=5) {
+            let mx = 50 + i*30;
+            ctx.fillRect(mx, 300, 2, 10);
+            ctx.fillText(i+"m", mx-5, 325);
+        }
+
+        // Block
+        let bx = 50 + state.x * 30; // Scale 30px = 1m
+        let by = 260;
+        ctx.fillStyle = "#e67e22"; ctx.fillRect(bx, by, 40, 40);
+        
+        // Pull Vector
+        let rad = state.ang * Math.PI / 180;
+        let forceLen = state.F * 2; 
+        let endX = bx + 20 + forceLen * Math.cos(-rad);
+        let endY = by + 20 + forceLen * Math.sin(-rad);
+        
+        drawVector(bx+20, by+20, endX-(bx+20), endY-(by+20), "black");
+        
+        // Component Vector (Ghost)
+        ctx.setLineDash([5,5]);
+        drawVector(bx+20, by+20, (endX-(bx+20)), 0, "rgba(0,0,0,0.3)"); // Fx
+        ctx.setLineDash([]);
+        
+        // Finish Line
+        let fx = 50 + state.targetD * 30;
+        ctx.strokeStyle = "red"; ctx.beginPath(); ctx.moveTo(fx, 200); ctx.lineTo(fx, 300); ctx.stroke();
+        ctx.fillStyle = "red"; ctx.fillText("FINISH", fx-15, 190);
     }
 </script>
 
