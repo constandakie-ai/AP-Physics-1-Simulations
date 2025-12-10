@@ -131,6 +131,12 @@
             <button class="nav-btn" onclick="loadSim('7.3')">7.3 Rotational Kinematics</button>
             <button class="nav-btn" onclick="loadSim('7.4')">7.4 Rolling Motion (The Race)</button>
         </div>
+
+        <div class="unit-header" onclick="toggleMenu('u8-menu')">Unit 8: Fluids & Pressure <span>▼</span></div>
+        <div id="u8-menu" class="sub-menu">
+            <button class="nav-btn" onclick="loadSim('8.1')">8.1 Buoyancy & Archimedes</button>
+            <button class="nav-btn" onclick="loadSim('8.2')">8.2 Fluid Flow (Continuity)</button>
+        </div>
     </aside>
 
     <main id="main-view">
@@ -208,6 +214,8 @@
             case '7.2': setup_7_2(); break; // Rotational Inertia (New)
             case '7.3': setup_7_3(); break; // New Rotational Kinematics
             case '7.4': setup_7_4(); break; // New Rolling Race
+            case '8.1': setup_8_1(); break; // New Buoyancy
+            case '8.2': setup_8_2(); break; // New Continuity
         }
     }
     // Load Default
@@ -3066,6 +3074,273 @@
             ctx.fillStyle = "#333"; ctx.font = "bold 12px sans-serif";
             ctx.fillText(r.obj.label, 20, r.y - 20);
         });
+    }
+    // ===============================================
+    // === UNIT 8.1: BUOYANCY & ARCHIMEDES ===
+    // ===============================================
+    function setup_8_1() {
+        document.getElementById('sim-title').innerText = "8.1 Buoyancy & Archimedes' Principle";
+        document.getElementById('sim-desc').innerHTML = `
+            <h3>Sink or Float?</h3>
+            <p>An object submerged in a fluid experiences an upward Buoyant Force (<span class="var">F<sub>B</sub> = &rho;<sub>fluid</sub>V<sub>sub</sub>g</span>).
+            <br>If <span class="var">&rho;<sub>object</sub> < &rho;<sub>fluid</sub></span>, it floats.
+            <br>If <span class="var">&rho;<sub>object</sub> > &rho;<sub>fluid</sub></span>, it sinks.</p>`;
+
+        document.getElementById('sim-controls').innerHTML = `
+            <div class="control-group">
+                <label>Object Density (<i class="var">&rho;<sub>o</sub></i>): <span id="v-ro">800</span> kg/m³</label>
+                <input type="range" id="in-ro" min="200" max="2000" step="100" value="800" oninput="reset_8_1()">
+            </div>
+            <div class="control-group">
+                <label>Fluid Density (<i class="var">&rho;<sub>f</sub></i>): <span id="v-rf">1000</span> kg/m³</label>
+                <input type="range" id="in-rf" min="500" max="1500" step="100" value="1000" oninput="reset_8_1()">
+            </div>
+            <div class="readout">
+                Status: <span id="out-status">Floats</span><br>
+                % Submerged: <span id="out-sub">0</span>%
+            </div>
+        `;
+        reset_8_1();
+    }
+
+    function reset_8_1() {
+        state = {
+            ro: parseFloat(document.getElementById('in-ro').value),
+            rf: parseFloat(document.getElementById('in-rf').value),
+            y: 0, v: 0, running: true
+        };
+        document.getElementById('v-ro').innerText = state.ro;
+        document.getElementById('v-rf').innerText = state.rf;
+        loop_8_1();
+    }
+
+    function loop_8_1() {
+        if(!state.running || currentSim !== '8.1') return;
+
+        // Physics Logic
+        // Specific Gravity = ro / rf
+        let ratio = state.ro / state.rf;
+        let status = "";
+        
+        if(ratio < 1.0) {
+            status = "Floating";
+        } else {
+            status = "Sunk";
+        }
+
+        // Target Depth Calculation
+        // y=0 is water surface. y=100 is fully submerged (block is 100px tall).
+        // If Sunk, it hits floor (depth 300).
+        let targetY = (ratio >= 1.0) ? 300 : (ratio * 100);
+        
+        // Smooth Animation
+        state.y += (targetY - state.y) * 0.1;
+        
+        document.getElementById('out-status').innerText = status;
+        
+        // Calc actual percent based on current Y
+        let currentSub = Math.min(100, Math.max(0, state.y)); 
+        if(state.y > 100) currentSub = 100; // If deeper than its height, it's 100%
+        
+        document.getElementById('out-sub').innerText = Math.round(currentSub);
+
+        draw_8_1(ratio);
+        animId = requestAnimationFrame(loop_8_1);
+    }
+
+    function draw_8_1(ratio) {
+        ctx.clearRect(0,0,700,450);
+        
+        
+
+        // Tank
+        let tankX = 200, tankW = 300;
+        let waterLevel = 150; // Y pixel
+        let tankBottom = 450;
+        
+        // Water
+        ctx.fillStyle = "rgba(52, 152, 219, 0.5)";
+        ctx.fillRect(tankX, waterLevel, tankW, 300);
+        
+        // Walls
+        ctx.strokeStyle = "#333"; ctx.lineWidth=4;
+        ctx.beginPath();
+        ctx.moveTo(tankX, waterLevel-50); ctx.lineTo(tankX, tankBottom); ctx.lineTo(tankX+tankW, tankBottom); ctx.lineTo(tankX+tankW, waterLevel-50);
+        ctx.stroke();
+
+        // The Block
+        let blockH = 100;
+        let blockW = 100;
+        // state.y is the depth of the BOTTOM of the block relative to surface
+        let blockBottomAbs = waterLevel + state.y;
+        let blockTopAbs = blockBottomAbs - blockH;
+        
+        ctx.fillStyle = "#e67e22";
+        ctx.fillRect(300, blockTopAbs, blockW, blockH);
+        ctx.strokeStyle = "black"; ctx.lineWidth=2;
+        ctx.strokeRect(300, blockTopAbs, blockW, blockH);
+        
+        // Label
+        ctx.fillStyle = "black"; ctx.textAlign="center";
+        ctx.fillText(state.ro + " kg/m³", 350, blockTopAbs + 55);
+
+        // --- Free Body Diagram (FBD) ---
+        let fbdX = 600, fbdY = 250;
+        ctx.fillStyle = "black"; ctx.beginPath(); ctx.arc(fbdX, fbdY, 5, 0, Math.PI*2); ctx.fill();
+        
+        // Gravity (Constant visual size)
+        drawVector(fbdX, fbdY, 0, 60, "green");
+        ctx.fillText("Fg", fbdX+15, fbdY+30);
+        
+        // Buoyancy (Variable)
+        let percentSub = Math.min(1.0, Math.max(0, state.y / 100));
+        if(state.y > 100) percentSub = 1.0; 
+        
+        // Fb magnitude relative to Fg
+        let fbMag = (state.rf / state.ro) * percentSub * 60;
+        
+        drawVector(fbdX, fbdY, 0, -fbMag, "blue");
+        ctx.fillText("Fb", fbdX+15, fbdY-fbMag-10);
+        
+        // Normal Force (Only if on bottom)
+        if(state.y > 295 && ratio > 1.0) {
+            let fnMag = 60 - fbMag;
+            drawVector(fbdX, fbdY, 0, -fnMag, "red");
+            ctx.fillText("Fn", fbdX-20, fbdY-fnMag-5);
+        }
+    }
+
+
+    // ===============================================
+    // === UNIT 8.2: FLUID DYNAMICS (Continuity) ===
+    // ===============================================
+    function setup_8_2() {
+        document.getElementById('sim-title').innerText = "8.2 Fluid Continuity Equation";
+        document.getElementById('sim-desc').innerHTML = `
+            <h3>Flow Rate is Constant</h3>
+            <p>Because fluids are incompressible, volume flow rate (<span class="var">Q</span>) is constant.
+            <br>Equation: <span class="var">A<sub>1</sub>v<sub>1</sub> = A<sub>2</sub>v<sub>2</sub></span>.
+            <br>If the pipe gets narrower, the fluid MUST speed up.</p>`;
+
+        document.getElementById('sim-controls').innerHTML = `
+            <div class="control-group">
+                <label>Input Speed (<i class="var">v<sub>1</sub></i>): <span id="v-v1">2.0</span> m/s</label>
+                <input type="range" id="in-v1" min="1" max="5" step="0.5" value="2.0" oninput="reset_8_2()">
+            </div>
+            <div class="control-group">
+                <label>Output Area (<i class="var">A<sub>2</sub></i>): <span id="v-a2">50</span>%</label>
+                <input type="range" id="in-a2" min="20" max="100" value="50" oninput="reset_8_2()">
+            </div>
+            <div class="readout">
+                Output Speed (<i class="var">v<sub>2</sub></i>): <span id="out-v2">0.0</span> m/s
+            </div>
+            <button class="btn btn-green" onclick="state.running=!state.running; loop_8_2()">Start Flow</button>
+        `;
+        reset_8_2();
+    }
+
+    function reset_8_2() {
+        state = {
+            v1: parseFloat(document.getElementById('in-v1').value),
+            a2pct: parseFloat(document.getElementById('in-a2').value),
+            particles: [],
+            running: true
+        };
+        // Setup Particles
+        for(let i=0; i<50; i++) {
+            state.particles.push({
+                x: Math.random() * 700,
+                y: Math.random() * 100, // Relative to pipe center
+            });
+        }
+        
+        document.getElementById('v-v1').innerText = state.v1;
+        document.getElementById('v-a2').innerText = state.a2pct;
+        loop_8_2();
+    }
+
+    function loop_8_2() {
+        if(!state.running || currentSim !== '8.2') return;
+
+        // Continuity Calc: v2 = v1 * (A1 / A2)
+        let v2 = state.v1 * (100 / state.a2pct);
+        document.getElementById('out-v2').innerText = v2.toFixed(1);
+
+        // Update Particles
+        state.particles.forEach(p => {
+            let localV = state.v1;
+            
+            // Constriction Logic (x > 400 is narrow part)
+            if(p.x > 400) localV = v2;
+            else if(p.x > 300) {
+                // Transition zone
+                let pct = (p.x - 300) / 100;
+                localV = state.v1 + (v2 - state.v1) * pct;
+            }
+            
+            p.x += localV * 2; 
+            if(p.x > 700) p.x = 0; // Recycle
+        });
+
+        draw_8_2();
+        animId = requestAnimationFrame(loop_8_2);
+    }
+
+    function draw_8_2() {
+        ctx.clearRect(0,0,700,450);
+        ctx.fillStyle = "#fff"; ctx.fillRect(0,0,700,450);
+        
+        let cy = 225;
+        let r1 = 80; 
+        let r2 = r1 * (state.a2pct / 100); 
+        
+        // Draw Pipe (Gray Walls)
+        ctx.fillStyle = "#ecf0f1";
+        ctx.beginPath();
+        ctx.moveTo(0, cy - r1); ctx.lineTo(300, cy - r1); ctx.lineTo(400, cy - r2); ctx.lineTo(700, cy - r2);
+        ctx.lineTo(700, cy + r2); ctx.lineTo(400, cy + r2); ctx.lineTo(300, cy + r1); ctx.lineTo(0, cy + r1);
+        ctx.fill();
+        
+        // Outlines
+        ctx.strokeStyle = "#7f8c8d"; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.moveTo(0, cy-r1); ctx.lineTo(300, cy-r1); ctx.lineTo(400, cy-r2); ctx.lineTo(700, cy-r2); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(0, cy+r1); ctx.lineTo(300, cy+r1); ctx.lineTo(400, cy+r2); ctx.lineTo(700, cy+r2); ctx.stroke();
+
+        
+
+[Image of continuity equation pipe diagram]
+
+
+        // Particles
+        ctx.fillStyle = "#3498db";
+        state.particles.forEach(p => {
+            // Squeeze Y position as pipe narrows
+            let localR = r1;
+            if(p.x > 400) localR = r2;
+            else if(p.x > 300) {
+                let pct = (p.x - 300)/100;
+                localR = r1 - (r1-r2)*pct;
+            }
+            
+            // Map original random Y (0-100) to current pipe width
+            let normalizedY = (p.y / 100) - 0.5; // -0.5 to 0.5
+            let drawY = cy + (normalizedY * 2 * localR * 0.8); 
+            
+            ctx.beginPath(); ctx.arc(p.x, drawY, 3, 0, Math.PI*2); ctx.fill();
+            
+            // Speed Trail (longer if faster)
+            let tailLen = (p.x > 400) ? 15 : 5; 
+            ctx.strokeStyle = "rgba(52, 152, 219, 0.5)"; ctx.lineWidth=1;
+            ctx.beginPath(); ctx.moveTo(p.x, drawY); ctx.lineTo(p.x - tailLen, drawY); ctx.stroke();
+        });
+        
+        // Labels
+        ctx.fillStyle = "black"; ctx.font = "bold 14px sans-serif";
+        ctx.fillText("Area 1", 50, cy-100);
+        ctx.fillText("v1 = " + state.v1 + " m/s", 50, cy+110);
+        ctx.fillText("Area 2", 550, cy-100);
+        let v2calc = state.v1 * (100 / state.a2pct);
+        ctx.fillText("v2 = " + v2calc.toFixed(1) + " m/s", 550, cy+110);
     }
 </script>
 
