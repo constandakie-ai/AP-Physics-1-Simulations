@@ -95,6 +95,7 @@
             <button class="nav-btn" onclick="loadSim('2.4')">2.4 Static vs. Kinetic Friction</button>
             <button class="nav-btn" onclick="loadSim('2.5')">2.5 Apparent Weight (Elevator)</button>
             <button class="nav-btn" onclick="loadSim('2.6')">2.6 Drag & Terminal Velocity</button>
+            <button class="nav-btn" onclick="loadSim('2.7')">2.7 Center of Mass</button>
         </div>
 
         <div class="unit-header" onclick="toggleMenu('u3-menu')">Unit 3: Circ. Motion <span>▼</span></div>
@@ -128,6 +129,7 @@
     <button class="nav-btn" onclick="loadSim('7.1')">7.1 Torque & Equilibrium</button>
     <button class="nav-btn" onclick="loadSim('7.2')">7.2 Rotational Inertia & Ang. Momentum</button>
     <button class="nav-btn" onclick="loadSim('7.3')">7.3 Rotational Kinematics</button>
+    <button class="nav-btn" onclick="loadSim('7.4')">7.4 Rolling Motion (The Race)</button>
 </div>
     </aside>
 
@@ -191,6 +193,7 @@
             case '2.4': setup_2_4(); break; // New Friction Lab
             case '2.5': setup_2_5(); break; // New Elevator Lab
             case '2.6': setup_2_6(); break; // New Terminal Velocity
+            case '2.7': setup_2_7(); break; // New Center of Mass
             case '3.1': setup_3_1(); break;
             case '3.2': setup_3_2(); break;
             case '3.3': setup_3_3(); break; // New Vertical Circle
@@ -204,6 +207,7 @@
             case '7.1': setup_7_1(); break; // Torque (Seesaw)
             case '7.2': setup_7_2(); break; // Rotational Inertia (New)
             case '7.3': setup_7_3(); break; // New Rotational Kinematics
+            case '7.4': setup_7_4(); break; // New Rolling Race
         }
     }
     // Load Default
@@ -2828,6 +2832,240 @@
         // Legend
         ctx.font = "12px sans-serif";
         ctx.fillText("Energy Conservation", bx, by-110);
+    }
+    // ===============================================
+    // === UNIT 2.7: CENTER OF MASS ===
+    // ===============================================
+    function setup_2_7() {
+        document.getElementById('sim-title').innerText = "2.7 Center of Mass";
+        document.getElementById('sim-desc').innerHTML = `
+            <h3>Finding the Balance Point</h3>
+            <p>The Center of Mass (<span class="var">x<sub>cm</sub></span>) is the weighted average position of a system's mass.
+            <br>Eq: <span class="var">x<sub>cm</sub> = (m<sub>1</sub>x<sub>1</sub> + m<sub>2</sub>x<sub>2</sub>) / (m<sub>1</sub> + m<sub>2</sub>)</span>.
+            <br><i>Try to make the Center of Mass (Green Dot) land exactly on the fulcrum (triangle)!</i></p>`;
+
+        document.getElementById('sim-controls').innerHTML = `
+            <div class="control-group">
+                <label>Mass 1 (Red): <span id="v-m1">10</span> kg</label>
+                <input type="range" id="in-m1" min="1" max="20" value="10" oninput="reset_2_7()">
+            </div>
+             <div class="control-group">
+                <label>Pos 1 (<i class="var">x<sub>1</sub></i>): <span id="v-x1">1</span> m</label>
+                <input type="range" id="in-x1" min="0" max="4" step="0.5" value="1" oninput="reset_2_7()">
+            </div>
+            <div class="control-group">
+                <label>Mass 2 (Blue): <span id="v-m2">10</span> kg</label>
+                <input type="range" id="in-m2" min="1" max="20" value="10" oninput="reset_2_7()">
+            </div>
+             <div class="control-group">
+                <label>Pos 2 (<i class="var">x<sub>2</sub></i>): <span id="v-x2">5</span> m</label>
+                <input type="range" id="in-x2" min="2" max="6" step="0.5" value="5" oninput="reset_2_7()">
+            </div>
+            <div class="readout">Center of Mass: <span id="out-cm">0.0</span> m</div>
+        `;
+        reset_2_7();
+    }
+
+    function reset_2_7() {
+        state = {
+            m1: parseFloat(document.getElementById('in-m1').value),
+            x1: parseFloat(document.getElementById('in-x1').value),
+            m2: parseFloat(document.getElementById('in-m2').value),
+            x2: parseFloat(document.getElementById('in-x2').value)
+        };
+        // Update Labels
+        document.getElementById('v-m1').innerText = state.m1;
+        document.getElementById('v-x1').innerText = state.x1;
+        document.getElementById('v-m2').innerText = state.m2;
+        document.getElementById('v-x2').innerText = state.x2;
+
+        // Calc CM
+        let num = (state.m1 * state.x1) + (state.m2 * state.x2);
+        let den = state.m1 + state.m2;
+        state.cm = num / den;
+
+        document.getElementById('out-cm').innerText = state.cm.toFixed(2);
+        draw_2_7();
+    }
+
+    function draw_2_7() {
+        ctx.clearRect(0,0,700,450);
+        let scale = 80; // 80px = 1m
+        let offset = 50;
+
+        
+
+        // Draw Floor/Ruler
+        ctx.strokeStyle = "#333";
+        ctx.beginPath(); ctx.moveTo(offset, 300); ctx.lineTo(650, 300); ctx.stroke();
+        
+        // Ticks
+        ctx.fillStyle = "#7f8c8d"; ctx.textAlign = "center";
+        for(let i=0; i<=7; i++) {
+            let px = offset + i*scale;
+            ctx.fillRect(px, 300, 2, 10);
+            ctx.fillText(i+"m", px, 325);
+        }
+
+        // Draw Masses
+        let px1 = offset + state.x1 * scale;
+        let s1 = 20 + state.m1 * 2;
+        ctx.fillStyle = "#e74c3c"; ctx.fillRect(px1 - s1/2, 300 - s1, s1, s1);
+        ctx.fillStyle = "white"; ctx.fillText("m1", px1, 300 - s1/2 + 5);
+
+        let px2 = offset + state.x2 * scale;
+        let s2 = 20 + state.m2 * 2;
+        ctx.fillStyle = "#3498db"; ctx.fillRect(px2 - s2/2, 300 - s2, s2, s2);
+        ctx.fillStyle = "white"; ctx.fillText("m2", px2, 300 - s2/2 + 5);
+
+        // Draw Connecting Rod (conceptual)
+        ctx.strokeStyle = "#bdc3c7"; ctx.lineWidth = 4; 
+        ctx.beginPath(); ctx.moveTo(px1, 300-s1/2); ctx.lineTo(px2, 300-s2/2); ctx.stroke();
+
+        // Draw Center of Mass
+        let cmPx = offset + state.cm * scale;
+        ctx.fillStyle = "#2ecc71"; 
+        ctx.beginPath(); ctx.arc(cmPx, 300, 8, 0, Math.PI*2); ctx.fill();
+        
+        // CM Label
+        ctx.fillStyle = "#27ae60"; ctx.font = "bold 14px sans-serif";
+        ctx.fillText("CM", cmPx, 280);
+        
+        // Fulcrum (Triangle at CM)
+        ctx.fillStyle = "#333";
+        ctx.beginPath(); ctx.moveTo(cmPx, 300); ctx.lineTo(cmPx-10, 320); ctx.lineTo(cmPx+10, 320); ctx.fill();
+    }
+
+
+    // ===============================================
+    // === UNIT 7.4: ROLLING MOTION (The Race) ===
+    // ===============================================
+    function setup_7_4() {
+        document.getElementById('sim-title').innerText = "7.4 Rolling Motion Race";
+        document.getElementById('sim-desc').innerHTML = `
+            <h3>The Great Race</h3>
+            <p>Objects with lower Rotational Inertia (<span class="var">I</span>) accelerate faster.
+            <br>Energy is split between Translation (<span class="var">&frac12;mv<sup>2</sup></span>) and Rotation (<span class="var">&frac12;I&omega;<sup>2</sup></span>).
+            <br><b>Shapes:</b> Box (No friction), Sphere (I = 0.4mr²), Hoop (I = 1.0mr²).</p>`;
+
+        document.getElementById('sim-controls').innerHTML = `
+            <div class="control-group">
+                <label>Ramp Angle (<i class="var">&theta;</i>): <span id="v-ang">20</span>&deg;</label>
+                <input type="range" id="in-ang" min="10" max="40" value="20" oninput="reset_7_4()">
+            </div>
+            <div style="display:flex; justify-content:space-around; margin-bottom:15px; font-size:0.9em;">
+                <div style="color:#e74c3c">■ Box (Slide)</div>
+                <div style="color:#3498db">● Sphere (I=0.4mr²)</div>
+                <div style="color:#f1c40f">◎ Hoop (I=mr²)</div>
+            </div>
+            <button class="btn btn-green" onclick="state.running=!state.running; loop_7_4()">Start Race</button>
+            <button class="btn btn-red" onclick="reset_7_4()">Reset</button>
+        `;
+        reset_7_4();
+    }
+
+    function reset_7_4() {
+        state = {
+            theta: parseFloat(document.getElementById('in-ang').value),
+            box: {x: 0, v: 0, c: "#e74c3c", label: "Box"},
+            sphere: {x: 0, v: 0, c: "#3498db", label: "Sphere"},
+            hoop: {x: 0, v: 0, c: "#f1c40f", label: "Hoop"},
+            running: false,
+            t: 0
+        };
+        document.getElementById('v-ang').innerText = state.theta;
+        draw_7_4();
+    }
+
+    function loop_7_4() {
+        if(!state.running || currentSim !== '7.4') return;
+        
+        let g = 9.8;
+        let dt = 0.05;
+        let rad = state.theta * Math.PI / 180;
+        let sin = Math.sin(rad);
+        
+        // Accelerations based on shape factor (beta)
+        // a = g * sin(theta) / (1 + beta)
+        
+        // 1. Box (Sliding frictionless): beta = 0
+        let a_box = g * sin;
+        
+        // 2. Sphere: beta = 0.4
+        let a_sphere = g * sin / 1.4;
+        
+        // 3. Hoop: beta = 1.0
+        let a_hoop = g * sin / 2.0;
+
+        // Integrate
+        state.box.v += a_box * dt; state.box.x += state.box.v * dt;
+        state.sphere.v += a_sphere * dt; state.sphere.x += state.sphere.v * dt;
+        state.hoop.v += a_hoop * dt; state.hoop.x += state.hoop.v * dt;
+        
+        state.t += dt;
+        
+        // Finish line check
+        if(state.box.x > 10 && state.sphere.x > 10 && state.hoop.x > 10) state.running = false;
+
+        draw_7_4();
+        animId = requestAnimationFrame(loop_7_4);
+    }
+
+    function draw_7_4() {
+        ctx.clearRect(0,0,700,450);
+        
+        
+
+        // Draw 3 Ramps (Stacked vertically)
+        let ramps = [
+            {obj: state.box, y: 100, beta: 0},
+            {obj: state.sphere, y: 220, beta: 0.4},
+            {obj: state.hoop, y: 340, beta: 1.0}
+        ];
+        
+        let rad = state.theta * Math.PI / 180;
+        
+        ramps.forEach(r => {
+            // Draw Slope
+            ctx.save();
+            ctx.translate(50, r.y);
+            ctx.rotate(rad);
+            
+            ctx.fillStyle = "#bdc3c7"; ctx.fillRect(0, 0, 600, 5); // Ramp surface
+            
+            // Draw Object
+            let xPos = r.obj.x * 50; // Scale
+            if(xPos > 600) xPos = 600;
+            
+            ctx.fillStyle = r.obj.c;
+            
+            // Rotation visual angle = x / r
+            let rot = (xPos / 15); 
+            
+            ctx.save();
+            ctx.translate(xPos, -15);
+            if(r.beta > 0) ctx.rotate(rot); // Only rotate rolling things
+            
+            if(r.beta === 0) { // Box
+                 ctx.fillRect(-15, -15, 30, 30);
+            } else if (r.beta === 0.4) { // Sphere
+                 ctx.beginPath(); ctx.arc(0,0,15,0,Math.PI*2); ctx.fill();
+                 ctx.strokeStyle="white"; ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(15,0); ctx.stroke(); // line to see rotation
+            } else { // Hoop
+                 ctx.strokeStyle = r.obj.c; ctx.lineWidth=5; 
+                 ctx.beginPath(); ctx.arc(0,0,13,0,Math.PI*2); ctx.stroke();
+                 ctx.strokeStyle="black"; ctx.lineWidth=2;
+                 ctx.beginPath(); ctx.moveTo(0,-13); ctx.lineTo(0,13); ctx.stroke(); 
+                 ctx.beginPath(); ctx.moveTo(-13,0); ctx.lineTo(13,0); ctx.stroke(); 
+            }
+            
+            ctx.restore(); // End object transform
+            ctx.restore(); // End ramp transform
+            
+            // Label
+            ctx.fillStyle = "#333"; ctx.font = "bold 12px sans-serif";
+            ctx.fillText(r.obj.label, 20, r.y - 20);
+        });
     }
 </script>
 
