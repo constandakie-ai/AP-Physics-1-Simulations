@@ -2082,27 +2082,33 @@
             ctx.fillText("ω", cx-5, cy-5);
         }
     }
+    
     // ===============================================
-    // === UNIT 2.4: STATIC VS KINETIC FRICTION ===
+    // === UNIT 2.4: STATIC VS KINETIC FRICTION (REFINED) ===
     // ===============================================
     function setup_2_4() {
-        document.getElementById('sim-title').innerText = "2.4 Friction Graphing Lab";
+        document.getElementById('sim-title').innerText = "2.4 Static vs. Kinetic Friction";
         document.getElementById('sim-desc').innerHTML = `
             <h3>The Friction "Hump"</h3>
-            <p>Static Friction (<span class="var">f<sub>s</sub></span>) matches your applied force until it reaches a maximum. 
-            Once the object moves, Kinetic Friction (<span class="var">f<sub>k</sub></span>) takes over and is usually lower.
-            <br><i>Slowly increase the Applied Force to see the break point!</i></p>`;
+            <p><b>Static Friction</b> (<span class="var">f<sub>s</sub></span>) matches the Applied Force until it reaches a maximum limit (<span class="var">f<sub>s,max</sub> = &mu;<sub>s</sub>F<sub>N</sub></span>). 
+            <br>Once moving, <b>Kinetic Friction</b> (<span class="var">f<sub>k</sub> = &mu;<sub>k</sub>F<sub>N</sub></span>) takes over and is usually constant.
+            <br><i>Instructions: Increase the Applied Force slowly to find the breaking point.</i></p>`;
 
         document.getElementById('sim-controls').innerHTML = `
             <div class="control-group">
+                <label>Block Mass (<i class="var">m</i>): <span id="v-m">5.0</span> kg</label>
+                <input type="range" id="in-m" min="1.0" max="10.0" step="0.5" value="5.0" oninput="reset_2_4()">
+            </div>
+            <div class="control-group">
                 <label>Applied Force (<i class="var">F<sub>app</sub></i>): <span id="v-fa">0</span> N</label>
-                <input type="range" id="in-fa" min="0" max="50" value="0" step="0.5" oninput="state.Fa=parseFloat(this.value); update_2_4()">
+                <input type="range" id="in-fa" min="0" max="100" value="0" step="0.5" oninput="state.Fa=parseFloat(this.value); update_2_4()">
             </div>
-            <div class="readout">
-                Friction (<i class="var">f</i>): <span id="out-ff">0.0</span> N<br>
-                Status: <span id="out-stat" style="font-weight:bold; color:red;">Static</span>
+            <div style="margin-top:10px; padding:10px; background:#f8f9fa; border-radius:4px; font-size: 0.9em;">
+                <div>Status: <span id="out-stat" style="font-weight:bold; color:#c0392b;">Static</span></div>
+                <div>Friction (<i class="var">f</i>): <span id="out-ff">0.0</span> N</div>
+                <div>Net Force (<i class="var">F<sub>net</sub></i>): <span id="out-fnet">0.0</span> N</div>
             </div>
-            <button class="btn btn-red" onclick="reset_2_4()">Reset Graph</button>
+            <button class="btn btn-red" onclick="reset_2_4()" style="margin-top:15px;">Reset Graph</button>
         `;
         reset_2_4();
     }
@@ -2110,113 +2116,205 @@
     function reset_2_4() {
         state = {
             Fa: 0, 
-            m: 5, 
+            m: parseFloat(document.getElementById('in-m').value), 
             mu_s: 0.6, 
             mu_k: 0.4,
             v: 0, x: 0,
             graphData: [],
-            running: true // Running logic handled in update
+            running: true
         };
+        // Reset slider UI
         document.getElementById('in-fa').value = 0;
+        document.getElementById('v-m').innerText = state.m.toFixed(1);
+        
+        // Recalculate max graph scale based on new mass
+        state.maxFriction = state.m * 9.8 * state.mu_s * 1.2; // 20% headroom
+        
         update_2_4(); // Initial draw
     }
 
     function update_2_4() {
         if(currentSim !== '2.4') return;
         document.getElementById('v-fa').innerText = state.Fa;
-
+        
         // Physics Calc
         let Fn = state.m * 9.8;
         let fs_max = state.mu_s * Fn;
         let fk = state.mu_k * Fn;
-
+        
         let friction = 0;
-
+        let Fnet = 0;
+        
         if (state.v === 0) {
             // STATIC REGION
             if (state.Fa <= fs_max) {
                 friction = state.Fa;
-                document.getElementById('out-stat').innerText = "Static (Not Moving)";
+                Fnet = 0;
+                document.getElementById('out-stat').innerText = "Static (Stuck)";
                 document.getElementById('out-stat').style.color = "#c0392b";
             } else {
                 // BREAKS LOOSE
-                state.v = 0.1; // Start moving
+                state.v = 0.05; // Small nudge
+                friction = fk;
             }
         } 
-
+        
         if (state.v > 0) {
             // KINETIC REGION
             friction = fk;
+            Fnet = state.Fa - fk;
             document.getElementById('out-stat').innerText = "Kinetic (Sliding)";
             document.getElementById('out-stat').style.color = "#27ae60";
-
-            // Accel
-            let Fnet = state.Fa - fk;
-            state.v += (Fnet / state.m) * 0.1;
+            
+            // Dynamics
+            let a = Fnet / state.m;
+            state.v += a * 0.1; // Time step
             state.x += state.v * 0.1;
         }
 
+        // Update Readouts
         document.getElementById('out-ff').innerText = friction.toFixed(1);
-
-        // Add to graph (F_app vs Friction)
-        // We plot F_app on X, Friction on Y
-        state.graphData.push({x: state.Fa, y: friction});
-
-        draw_2_4();
+        document.getElementById('out-fnet').innerText = Fnet.toFixed(1);
+        
+        // Add to graph (X: Applied Force, Y: Friction Force)
+        // Only add point if we aren't duplicating the last one (for cleaner drawing)
+        if(state.graphData.length === 0 || state.Fa !== state.graphData[state.graphData.length-1].x) {
+             state.graphData.push({x: state.Fa, y: friction});
+        }
+        
+        draw_2_4(friction, Fn);
     }
 
-    function draw_2_4() {
+    function draw_2_4(fVal, Fn) {
         ctx.clearRect(0,0,700,450);
+        
+        // --- TOP PANEL: PHYSICAL SIMULATION ---
+        let floorY = 180;
+        ctx.fillStyle = "#ecf0f1"; ctx.fillRect(0,0,700,200); // Sky
+        ctx.fillStyle = "#bdc3c7"; ctx.fillRect(0,floorY,700,20); // Floor
+        
+        // Infinite scrolling floor effect
+        let bx = 100; 
+        let drawX = 100 + (state.x % 500);
+        
+        // Draw Block
+        let size = 20 + state.m * 5; // Size scales slightly with mass
+        let by = floorY - size;
+        ctx.fillStyle = "#e67e22"; ctx.fillRect(drawX, by, size, size);
+        ctx.strokeStyle = "#d35400"; ctx.lineWidth=2; ctx.strokeRect(drawX, by, size, size);
+        
+        // Mass Label
+        ctx.fillStyle = "white"; ctx.font = "bold 12px serif"; ctx.textAlign="center";
+        ctx.fillText(state.m+"kg", drawX + size/2, by + size/2 + 4);
 
-        // Split Screen: Visual Top, Graph Bottom
+        // --- VECTORS (FBD) ---
+        let cx = drawX + size/2;
+        let cy = by + size/2;
+        
+        // 1. Gravity (mg) - Down
+        let fgLen = (state.m * 9.8) * 0.8; // Scale factor
+        drawVector(cx, cy + size/2, 0, fgLen, "green"); 
+        ctx.fillStyle="black"; ctx.fillText("Fg", cx+5, cy + size/2 + fgLen + 10);
 
-        // --- TOP: THE BLOCK ---
-        ctx.fillStyle = "#f0f3f5"; ctx.fillRect(0,0,700,200);
-        ctx.beginPath(); ctx.moveTo(0,180); ctx.lineTo(700,180); ctx.stroke();
+        // 2. Normal (Fn) - Up
+        let fnLen = fgLen; // On flat surface, Fn = mg
+        drawVector(cx, cy - size/2, 0, -fnLen, "blue");
+        ctx.fillText("Fn", cx+5, cy - size/2 - fnLen - 5);
 
-        let bx = 50 + (state.x % 600); // Wrap for infinite slide
+        // 3. Applied (Fa) - Right
+        if(state.Fa > 0) {
+            let faLen = state.Fa * 1.5;
+            drawVector(cx + size/2, cy, faLen, 0, "black");
+            ctx.fillText("Fapp", cx + size/2 + faLen + 5, cy+4);
+        }
 
-        // Block
-        ctx.fillStyle = "#e67e22"; ctx.fillRect(bx, 130, 50, 50);
+        // 4. Friction (f) - Left
+        if(fVal > 0) {
+            let fLen = fVal * 1.5;
+            drawVector(cx - size/2, cy, -fLen, 0, "red");
+            ctx.fillText("f", cx - size/2 - fLen - 10, cy+4);
+        }
 
-        // Force Vectors
-        // Applied (Right)
-        if(state.Fa > 0) drawVector(bx+25, 155, state.Fa*3, 0, "black");
-        // Friction (Left)
-        let fVal = parseFloat(document.getElementById('out-ff').innerText);
-        if(fVal > 0) drawVector(bx+25, 155, -fVal*3, 0, "red");
-
-        // Microscopic View (Magnifying Glass)
-
-        ctx.strokeStyle = "#7f8c8d"; ctx.lineWidth=2;
-        ctx.beginPath(); ctx.arc(bx+25, 180, 30, 0, Math.PI*2); ctx.stroke();
-        ctx.fillStyle = "rgba(255,255,255,0.8)"; ctx.fill();
-        // Teeth visualization
-        ctx.beginPath(); 
-        for(let i=-20; i<20; i+=5) {
-            let offset = (state.v > 0) ? (Date.now()/50)%10 : 0; // Jiggle if moving
-            ctx.moveTo(bx+25+i, 180); ctx.lineTo(bx+25+i+2, 175); // Top teeth
-            ctx.moveTo(bx+25+i+offset, 180); ctx.lineTo(bx+25+i+2+offset, 185); // Bottom teeth
+        // --- MICROSCOPIC ZOOM BUBBLE ---
+        // 
+        let bubbleX = drawX + size;
+        let bubbleY = floorY;
+        let r = 35;
+        
+        // Magnifying Glass
+        ctx.fillStyle = "white"; ctx.beginPath(); ctx.arc(bubbleX, bubbleY, r, 0, Math.PI*2); ctx.fill();
+        ctx.strokeStyle = "#7f8c8d"; ctx.lineWidth=3; ctx.stroke();
+        
+        // Jagged Teeth Logic
+        ctx.save();
+        ctx.beginPath(); ctx.rect(bubbleX-r, bubbleY-r, 2*r, 2*r); ctx.clip(); // Clip to circle
+        
+        ctx.strokeStyle = "#e67e22"; ctx.lineWidth=2; // Top Surface (Block)
+        let offset = (state.x * 10) % 20; // Visual movement
+        ctx.beginPath();
+        for(let i=-r; i<r; i+=10) {
+            ctx.lineTo(bubbleX + i, bubbleY - 5);
+            ctx.lineTo(bubbleX + i + 5, bubbleY + 5); // Tooth down
         }
         ctx.stroke();
+        
+        ctx.strokeStyle = "#7f8c8d"; // Bottom Surface (Floor)
+        ctx.beginPath();
+        for(let i=-r; i<r; i+=10) {
+            ctx.lineTo(bubbleX + i - offset, bubbleY + 2); // Tooth up
+            ctx.lineTo(bubbleX + i + 5 - offset, bubbleY + 12);
+        }
+        ctx.stroke();
+        ctx.restore();
 
-        // --- BOTTOM: THE GRAPH ---
-        ctx.fillStyle = "white"; ctx.fillRect(0,200,700,250);
-        // Axes
-        ctx.strokeStyle = "black"; ctx.lineWidth=2;
-        ctx.beginPath(); ctx.moveTo(50, 400); ctx.lineTo(650, 400); ctx.stroke(); // X (F_app)
-        ctx.beginPath(); ctx.moveTo(50, 250); ctx.lineTo(50, 400); ctx.stroke(); // Y (F_frict)
-        ctx.fillText("Applied Force (N)", 300, 430);
-        ctx.save(); ctx.translate(30, 350); ctx.rotate(-Math.PI/2); ctx.fillText("Friction Force (N)", 0, 0); ctx.restore();
+        // --- BOTTOM PANEL: GRAPH ---
+        let gy = 230;
+        let gh = 200;
+        let gx = 60;
+        let gw = 600;
+        
+        // Background
+        ctx.fillStyle = "white"; ctx.fillRect(0, 200, 700, 250);
+        ctx.strokeStyle = "#ccc"; ctx.lineWidth=1; ctx.strokeRect(gx, gy, gw, gh);
+        
+        // Labels & Title
+        ctx.fillStyle = "#2c3e50"; ctx.font = "bold 14px Sans-Serif"; ctx.textAlign = "center";
+        ctx.fillText("Friction Force vs. Applied Force", 350, 220);
+        
+        // Axis Labels
+        ctx.font = "italic 13px Serif";
+        ctx.fillText("Applied Force (F_app)", 350, 445);
+        
+        ctx.save();
+        ctx.translate(20, 330);
+        ctx.rotate(-Math.PI/2);
+        ctx.fillText("Friction Force (f)", 0, 0);
+        ctx.restore();
 
         // Plot Data
-        ctx.strokeStyle = "blue"; ctx.lineWidth=3; ctx.beginPath();
+        ctx.beginPath();
+        ctx.strokeStyle = "#c0392b"; ctx.lineWidth=3;
+        
+        // Scaling
+        let maxFa = 100; // X axis max
+        let maxFric = state.maxFriction; // Y axis max (dynamic)
+        
         state.graphData.forEach((p, i) => {
-            let px = 50 + p.x * 10;
-            let py = 400 - p.y * 5;
-            if(i==0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+            let plotX = gx + (p.x / maxFa) * gw;
+            let plotY = (gy + gh) - (p.y / maxFric) * gh;
+            if(i===0) ctx.moveTo(plotX, plotY);
+            else ctx.lineTo(plotX, plotY);
         });
         ctx.stroke();
+        
+        // Draw Limit Line (fs_max)
+        let fs_max = state.mu_s * Fn;
+        let limitY = (gy + gh) - (fs_max / maxFric) * gh;
+        ctx.strokeStyle = "#95a5a6"; ctx.setLineDash([5,5]); ctx.lineWidth=1;
+        ctx.beginPath(); ctx.moveTo(gx, limitY); ctx.lineTo(gx+gw, limitY); ctx.stroke();
+        ctx.fillStyle = "#7f8c8d"; ctx.textAlign="right";
+        ctx.fillText("Max Static", gx + gw - 5, limitY - 5);
+        ctx.setLineDash([]);
     }
 
 
